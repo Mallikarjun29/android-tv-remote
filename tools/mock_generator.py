@@ -131,7 +131,7 @@ d.text((60,1100),"6 characters, shown on the TV screen. Pasting works.",font=f(2
 chip(d,60,1220,W-120,130,"Connect",fill=ACC,fc=DK,s=42)
 d.rounded_rectangle((60,1450,W-60,1620),30,fill=(40,22,30));d.text((100,1480),"Wrong code",font=f(34,True),fill=RED);d.text((100,1535),"Check the code on the TV and try again.",font=f(28),fill=TX)
 d.text((60,1740),"Remote, Apps and Keyboard unlock once a TV is connected.",font=f(28),fill=MU)
-tabs3(d,0,False);im.save("/tmp/p1.png")
+tabs3(d,0,False);im.save("/tmp/q1.png")
 # 2 remote dpad
 im,d=base();rhead(d);touchtoggle(d,False);chip(d,W-300,262,240,80,"123",fill=(40,60,120),s=34)
 cx,cy,R=540,800,290
@@ -142,14 +142,14 @@ for dx,dy in [(0,-205),(0,205),(-205,0),(205,0)]:
     pts={(0,-205):[(X-k,Y+k//2),(X+k,Y+k//2),(X,Y-k)],(0,205):[(X-k,Y-k//2),(X+k,Y-k//2),(X,Y+k)],(-205,0):[(X+k//2,Y-k),(X+k//2,Y+k),(X-k,Y)],(205,0):[(X-k//2,Y-k),(X-k//2,Y+k),(X+k,Y)]}[(dx,dy)]
     d.polygon(pts,fill=TX)
 dots3(d,0,1395);ctr(d,540,1345,"Tap 123 or swipe the page for the keypad",f(26),MU)
-navrow(d);volrow(d);tabs3(d,0);im.save("/tmp/p2.png")
+navrow(d);volrow(d);tabs3(d,0);im.save("/tmp/q2.png")
 # 3 touch
 im,d=base();rhead(d);touchtoggle(d,True);chip(d,W-300,262,240,80,"123",fill=(40,60,120),s=34)
 d.rounded_rectangle((60,380,W-60,1330),50,fill=CARD)
 for gx in range(120,W-100,90):
     for gy in range(440,1300,90): d.ellipse((gx,gy,gx+6,gy+6),fill=(58,66,94))
 ctr(d,540,820,"Swipe to move",f(54,True),MU);ctr(d,540,900,"Tap = OK",f(32),MU);ctr(d,540,950,"Page swipes are off in touch mode",f(26),MU)
-navrow(d,pressed=1);volrow(d);tabs3(d,0);im.save("/tmp/p3.png")
+navrow(d,pressed=1);volrow(d);tabs3(d,0);im.save("/tmp/q3.png")
 # 4 keypad
 im,d=base();rhead(d);d.text((60,280),"Number keypad",font=f(34,True),fill=MU);chip(d,W-300,262,240,80,"D-pad",fill=(40,60,120),s=34)
 d.rounded_rectangle((60,370,W-60,450),30,fill=CARD,outline=ACC,width=3);d.text((100,375),"2 5 1|",font=f(48,True),fill=TX);d.text((W-340,392),"Channel",font=f(28),fill=MU)
@@ -161,12 +161,12 @@ for i,k_ in enumerate(keys):
     if k_=="bs":
         cx2,cy2=x+150,y+85;d.polygon([(cx2-50,cy2),(cx2-20,cy2-34),(cx2+50,cy2-34),(cx2+50,cy2+34),(cx2-20,cy2+34)],outline=TX,width=6);d.line((cx2-5,cy2-14,cx2+30,cy2+14),fill=TX,width=6);d.line((cx2-5,cy2+14,cx2+30,cy2-14),fill=TX,width=6);ctr(d,x+150,y+135,"Delete",f(28),MU)
     else: ctr(d,x+150,y+30,k_,f(84,True),TX)
-dots3(d,1,1390);navrow(d);volrow(d);tabs3(d,0);im.save("/tmp/p4.png")
+dots3(d,1,1390);navrow(d);volrow(d);tabs3(d,0);im.save("/tmp/q4.png")
 # 5 apps
 im,d=base();header(d,"Apps","")
 d.ellipse((62,222,86,246),fill=GRN);d.text((100,208),"Living Room Sony Bravia 5...",font=f(30),fill=GRN)
-L={n:Image.open(f"/tmp/logos/{n}.png").convert("RGBA") for n in ["netflix","prime","apple","hotstar","zee5","xstream"]}
-tiles=[("Airtel Xstream Play","xstream",(255,255,255)),("ZEE5","zee5",(255,255,255)),("JioHotstar","hotstar",(255,255,255)),("Netflix","netflix",(0,0,0)),("Prime Video","prime",(255,255,255)),("Apple TV+","apple",(255,255,255))]
+L={n:Image.open(f"/tmp/logos/{n}.png").convert("RGBA") for n in ["netflix","prime","apple","hotstar","zee5","xstream","youtube"]}
+tiles=[("Airtel Xstream Play","xstream",(255,255,255)),("ZEE5","zee5",(255,255,255)),("JioHotstar","hotstar",(255,255,255)),("Netflix","netflix",(0,0,0)),("Prime Video","prime",(255,255,255)),("Apple TV+","apple",(255,255,255)),("YouTube","youtube",(255,255,255))]
 for i,(n,kk,bg) in enumerate(tiles):
     x=60+(i%2)*500;y=290+(i//2)*400;d.rounded_rectangle((x,y,x+460,y+360),50,fill=CARD)
     d.rounded_rectangle((x+30,y+30,x+430,y+230),36,fill=bg)
@@ -175,7 +175,7 @@ for i,(n,kk,bg) in enumerate(tiles):
         ctr(d,x+230,y+250,"Opening…",f(34,True),ACC);d.rounded_rectangle((x+60,y+312,x+400,y+324),6,fill=(55,62,88));d.rounded_rectangle((x+60,y+312,x+250,y+324),6,fill=ACC)
     else: ctr(d,x+230,y+262,n,f(36,True),TX)
 # add tile (dashed)
-x,y=60,1490
+x,y=560,1490
 d.rounded_rectangle((x,y,x+460,y+360),50,fill=(20,24,38))
 import math
 def dashed_rr(d,box,r,col,w=4):
@@ -189,12 +189,11 @@ def dashed_rr(d,box,r,col,w=4):
 dashed_rr(d,(x,y,x+460,y+360),50,ACC)
 d.ellipse((x+160,y+60,x+300,y+200),fill=(40,60,120));ic_plus(d,x+230,y+130,TX,40)
 ctr(d,x+230,y+250,"Add custom app",f(34,True),ACC)
-x,y=560,1490;d.rounded_rectangle((x,y,x+460,y+360),50,fill=CARD)
+x,y=60,1890;d.rounded_rectangle((x,y,x+460,y+360),50,fill=CARD)
 d.rounded_rectangle((x+30,y+30,x+430,y+230),36,fill=(40,60,120))
 cx,cy=x+230,y+130;d.arc((cx-70,cy-28,cx+6,cy+28),90,270,fill=TX,width=12);d.arc((cx-6,cy-28,cx+70,cy+28),270,90,fill=TX,width=12);d.line((cx-30,cy,cx+30,cy),fill=TX,width=12)
 ctr(d,x+230,y+262,"Cricket highlights",f(34,True),TX)
-d.rounded_rectangle((60,1880,W-60,1985),30,fill=(40,22,30));d.text((95,1905),"Prime Video isn't installed on this TV",font=f(30,True),fill=RED);d.text((95,1945),"Install it from the TV's Play Store, then try again.",font=f(24),fill=TX)
-tabs3(d,1);im.save("/tmp/p5.png")
+tabs3(d,1);im.save("/tmp/q5.png")
 # 6 keyboard
 im,d=base();header(d,"Type on TV","")
 d.ellipse((62,222,86,246),fill=GRN);d.text((100,208),"Living Room Sony Bravia 5…",font=f(30),fill=GRN)
@@ -213,7 +212,7 @@ d.rounded_rectangle((60,1520,160,1645),22,fill=(48,54,76));d.polygon([(110,1545)
 x=W-160;d.rounded_rectangle((x,1520,x+100,1645),22,fill=(48,54,76))
 cx2,cy2=x+50,1583;d.polygon([(cx2-30,cy2),(cx2-12,cy2-20),(cx2+30,cy2-20),(cx2+30,cy2+20),(cx2-12,cy2+20)],outline=TX,width=4)
 pill(d,60,1690,200,120,"123",s=34);pill(d,280,1690,520,120,"space",s=34);pill(d,820,1690,200,120,"Search",fill=ACC,fc=DK,s=32)
-tabs3(d,2);im.save("/tmp/p6.png")
+tabs3(d,2);im.save("/tmp/q6.png")
 # 7 no TV found
 im,d=base();header(d,"Add your TV","No TV found")
 d.rounded_rectangle((60,300,W-60,500),36,fill=(40,22,30));d.text((100,335),"Scanned for 10 seconds, nothing found.",font=f(34,True),fill=RED)
@@ -222,7 +221,7 @@ for i,t in enumerate(["Phone and TV are on the same Wi-Fi","TV is on and not in 
     y=560+i*140;d.rounded_rectangle((60,y,W-60,y+110),30,fill=CARD);d.ellipse((90,y+30,140,y+80),outline=ACC,width=5);ctr(d,115,y+34,str(i+1),f(34,True),ACC);d.text((175,y+30),t,font=f(32),fill=TX)
 chip(d,60,1180,W-120,130,"Scan again",fill=ACC,fc=DK,s=42)
 chip(d,60,1340,W-120,110,"Enter IP address",fc=ACC,out=ACC,s=36)
-tabs3(d,0,False);im.save("/tmp/p7.png")
+tabs3(d,0,False);im.save("/tmp/q7.png")
 # 8/9 picker
 def seg(d,mode):
     d.rounded_rectangle((100,330,W-100,410),40,fill=(20,24,38))
@@ -242,7 +241,7 @@ def picker(mode,out):
         field(d,440,"App name");field(d,560,"Package name");chip(d,100,680,W-200,80,"Add to my apps",fill=ACC,fc=DK,s=32)
         d.text((60,810),"Or pick from suggestions",font=f(32,True),fill=MU)
         d.rounded_rectangle((60,865,W-60,965),50,fill=CARD);d.ellipse((100,895,134,929),outline=MU,width=5);d.line((130,925,148,943),fill=MU,width=5);d.text((175,890),"Search suggestions",font=f(32),fill=MU)
-        rows=[("YouTube",False,(200,60,60)),("SonyLIV",False,(60,70,120)),("Hoichoi",False,(150,40,60)),("Spotify",False,(40,150,90))]
+        rows=[("SonyLIV",False,(60,70,120)),("Hoichoi",False,(150,40,60)),("Spotify",False,(40,150,90))]
         for i,(n,added,c) in enumerate(rows):
             y=995+i*190;d.rounded_rectangle((60,y,W-60,y+165),36,fill=CARD)
             d.rounded_rectangle((95,y+30,200,y+135),26,fill=c);ctr(d,147,y+55,n[0],f(60,True),(255,255,255))
@@ -257,8 +256,8 @@ def picker(mode,out):
             d.text((235,y+28),t,font=f(36,True),fill=TX);d.text((235,y+90),sb,font=f(30),fill=MU)
         d.text((60,1470),"Tip: share a link from your phone straight to this app.",font=f(28),fill=MU)
     tabs3(d,1);im.save(out)
-picker(0,"/tmp/p8.png");picker(1,"/tmp/p9.png")
-ims=[Image.open(f"/tmp/p{i}.png").resize((360,733)) for i in range(1,10)]
+picker(0,"/tmp/q8.png");picker(1,"/tmp/q9.png")
+ims=[Image.open(f"/tmp/q{i}.png").resize((360,733)) for i in range(1,10)]
 c=Image.new("RGB",(5*360+6*30,2*733+90),(8,10,18))
 for i,m in enumerate(ims): c.paste(m,(30+(i%5)*390,30+(i//5)*763))
-c.save("/tmp/pall.png")
+c.save("/tmp/qall.png")

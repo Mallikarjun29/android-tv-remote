@@ -11,7 +11,8 @@ from google.protobuf.internal.encoder import _VarintBytes
 from androidtvremote2.polo_pb2 import OuterMessage, Options
 from androidtvremote2.remotemessage_pb2 import RemoteMessage
 
-D = sys.argv[1]  # work dir with client_cert.der
+D = sys.argv[1]
+PP, RP = (6467, 6466) if len(sys.argv) > 2 and sys.argv[2] == "real" else (16467, 16466)
 LOG = open(os.path.join(D, "tv_log.jsonl"), "a", buffering=1)
 def log(**k): LOG.write(json.dumps(k) + "\n")
 
@@ -56,7 +57,10 @@ async def read_frame(r):
     return await r.readexactly(n)
 def frame(msg): b = msg.SerializeToString(); return _VarintBytes(len(b)) + b
 
+PAIRED = False
+
 async def pairing(r, w):
+    global PAIRED
     log(ev="pair_conn")
     try:
         while True:
@@ -77,7 +81,7 @@ async def pairing(r, w):
             elif m.HasField("secret"):
                 ok = m.secret.secret == secret()
                 log(ev="secret", ok=ok)
-                if ok: out.secret_ack.secret = m.secret.secret
+                if ok: out.secret_ack.secret = m.secret.secret; PAIRED = True
                 else: out.status = 402
             else:
                 log(ev="unknown_pair_msg"); continue
@@ -87,6 +91,8 @@ async def pairing(r, w):
     finally: w.close()
 
 async def remote(r, w):
+    if not PAIRED:
+        log(ev="remote_rejected_unpaired"); w.close(); return
     log(ev="remote_conn")
     try:
         m = RemoteMessage()
@@ -104,17 +110,19 @@ async def remote(r, w):
         m = RemoteMessage(); m.remote_start.started = True; w.write(frame(m)); await w.drain()
         m = RemoteMessage(); m.remote_ping_request.val1 = 77; m.remote_ping_request.val2 = 5; w.write(frame(m)); await w.drain()
         async def later():
-            await asyncio.sleep(1.2)
+            await asyncio.sleep(0.6)
             x = RemoteMessage(); x.remote_ime_key_inject.app_info.app_package = "com.netflix.ninja"; x.remote_ime_key_inject.text_field_status.value = ""
             w.write(frame(x)); await w.drain()
             x = RemoteMessage(); x.remote_ime_batch_edit.ime_counter = 4; x.remote_ime_batch_edit.field_counter = 9
             w.write(frame(x)); await w.drain()
-        asyncio.ensure_future(later())
+        ime_started = False
         while True:
             m = RemoteMessage(); m.ParseFromString(await read_frame(r))
             if m.HasField("remote_ping_response"): log(ev="pong", val1=m.remote_ping_response.val1)
             elif m.HasField("remote_key_inject"): log(ev="key", code=m.remote_key_inject.key_code, dir=m.remote_key_inject.direction)
-            elif m.HasField("remote_app_link_launch_request"): log(ev="launch", link=m.remote_app_link_launch_request.app_link)
+            elif m.HasField("remote_app_link_launch_request"):
+                log(ev="launch", link=m.remote_app_link_launch_request.app_link)
+                if not ime_started: ime_started = True; asyncio.ensure_future(later())  # app opened -> its search box takes focus
             elif m.HasField("remote_ime_batch_edit"):
                 b = m.remote_ime_batch_edit; e = b.edit_info[0]
                 log(ev="text", value=e.text_field_status.value, start=e.text_field_status.start, end=e.text_field_status.end, insert=e.insert, ime=b.ime_counter, field=b.field_counter)
@@ -123,8 +131,8 @@ async def remote(r, w):
     finally: w.close()
 
 async def main():
-    s1 = await asyncio.start_server(pairing, "127.0.0.1", 16467, ssl=ctx())
-    s2 = await asyncio.start_server(remote, "127.0.0.1", 16466, ssl=ctx())
+    s1 = await asyncio.start_server(pairing, "127.0.0.1", PP, ssl=ctx())
+    s2 = await asyncio.start_server(remote, "127.0.0.1", RP, ssl=ctx())
     open(os.path.join(D, "tv_ready"), "w").write("1")
     await asyncio.gather(s1.serve_forever(), s2.serve_forever())
 asyncio.run(main())

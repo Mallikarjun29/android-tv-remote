@@ -37,7 +37,7 @@ public class UnitTests {
         eq("url launch link", r.get(1).launchLink(), "https://a.b/c?d=1");
         eq("parse garbage ignored", AppStore.parse("junk\n\nA\t\t\n").size(), 0);
         eq("parse null", AppStore.parse(null).size(), 0);
-        eq("builtin count consistent", BuiltinApps.NAMES.length + "," + BuiltinApps.LOGOS.length + "," + BuiltinApps.PACKAGES.length, "6,6,6");
+        eq("builtin count consistent", BuiltinApps.NAMES.length + "," + BuiltinApps.LOGOS.length + "," + BuiltinApps.PACKAGES.length, "7,7,7");
         eq("digit keys", Keys.digit(0) + "," + Keys.digit(9), "7,16");
         System.out.println(fails == 0 ? "ALL PASS" : "FAILURES " + fails);
         System.exit(fails == 0 ? 0 : 1);
