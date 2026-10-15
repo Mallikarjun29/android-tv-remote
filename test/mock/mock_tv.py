@@ -110,10 +110,13 @@ async def remote(r, w):
         m = RemoteMessage(); m.remote_start.started = True; w.write(frame(m)); await w.drain()
         m = RemoteMessage(); m.remote_ping_request.val1 = 77; m.remote_ping_request.val2 = 5; w.write(frame(m)); await w.drain()
         async def later():
-            await asyncio.sleep(0.6)
+            await asyncio.sleep(0.6)  # app start: auto focus on its search box (app must NOT jump to keyboard)
             x = RemoteMessage(); x.remote_ime_key_inject.app_info.app_package = "com.netflix.ninja"; x.remote_ime_key_inject.text_field_status.value = ""
             w.write(frame(x)); await w.drain()
             x = RemoteMessage(); x.remote_ime_batch_edit.ime_counter = 4; x.remote_ime_batch_edit.field_counter = 9
+            w.write(frame(x)); await w.drain()
+            await asyncio.sleep(10.8)  # later: user really taps a text field
+            x = RemoteMessage(); x.remote_ime_key_inject.app_info.app_package = "com.netflix.ninja"; x.remote_ime_key_inject.text_field_status.value = ""
             w.write(frame(x)); await w.drain()
         ime_started = False
         if RP == 6466:  # real TVs can report a focused field right at connect; the app must not jump to the keyboard for it
@@ -121,7 +124,13 @@ async def remote(r, w):
         while True:
             m = RemoteMessage(); m.ParseFromString(await read_frame(r))
             if m.HasField("remote_ping_response"): log(ev="pong", val1=m.remote_ping_response.val1)
-            elif m.HasField("remote_key_inject"): log(ev="key", code=m.remote_key_inject.key_code, dir=m.remote_key_inject.direction)
+            elif m.HasField("remote_key_inject"):
+                log(ev="key", code=m.remote_key_inject.key_code, dir=m.remote_key_inject.direction)
+                if RP == 6466 and m.remote_key_inject.key_code == 3:  # TV home screen focuses a text field after Home
+                    async def home_ime():
+                        await asyncio.sleep(0.3)
+                        x = RemoteMessage(); x.remote_ime_key_inject.app_info.app_package = "com.sony.dtv.home"; w.write(frame(x)); await w.drain()
+                    asyncio.ensure_future(home_ime())
             elif m.HasField("remote_app_link_launch_request"):
                 log(ev="launch", link=m.remote_app_link_launch_request.app_link)
                 if not ime_started: ime_started = True; asyncio.ensure_future(later())  # app opened -> its search box takes focus

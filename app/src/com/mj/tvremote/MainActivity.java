@@ -136,12 +136,12 @@ public class MainActivity extends Activity implements TvSession.Listener {
     @Override public void onVolume() { updateVolume(); }
 
     @Override public void onTvError(String message) {
-        Toast.makeText(this, "The TV rejected the last command", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "The TV rejected the last command" + (lastLaunch.isEmpty() ? "" : " (" + lastLaunch + "). Tap the tile again to try another way."), Toast.LENGTH_LONG).show();
     }
 
     @Override public void onImeFocus(String pkg) {
         updateKeyboardBanner();
-        if (session.prefs().getBoolean("autoopen", true) && resumed && System.currentTimeMillis() - session.connectedAt > TvSession.IME_GRACE_MS) {
+        if (session.prefs().getBoolean("autoopen", true) && resumed && session.imeAutoOpenAllowed(pkg)) {
             kbGuard = true; kbField.setText(""); kbGuard = false; kbPrev = "";
             tab = 2;
             refresh();
@@ -554,7 +554,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-1, dp(14));
         c.addView(dots, dlp);
 
-        // persistent bottom block: VOL pill | (Back Home Menu / Mute) | CH pill
+        // persistent bottom block: VOL pill | (Back Home / Mute) | CH pill
         LinearLayout vols = new LinearLayout(this);
         vols.setGravity(Gravity.CENTER_VERTICAL);
         volPillNumber = new TextView[1];
@@ -563,16 +563,16 @@ public class MainActivity extends Activity implements TvSession.Listener {
         mid.setOrientation(LinearLayout.VERTICAL);
         mid.setGravity(Gravity.CENTER_HORIZONTAL);
         LinearLayout nav = new LinearLayout(this);
-        int[] icons = {Ui.I_BACK, Ui.I_HOME, Ui.I_MENU};
-        final int[] keys = {Keys.BACK, Keys.HOME, Keys.MENU};
-        for (int i = 0; i < 3; i++) {
+        int[] icons = {Ui.I_BACK, Ui.I_HOME};
+        final int[] keys = {Keys.BACK, Keys.HOME};
+        for (int i = 0; i < 2; i++) {
             final int k = keys[i];
             FrameLayout b2 = new FrameLayout(this);
             b2.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(24)));
-            b2.addView(new Ui.IconView(this, icons[i], Ui.TX), new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+            b2.addView(new Ui.IconView(this, icons[i], Ui.TX), new FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER));
             Ui.button(b2, new Runnable() { public void run() { session.key(k); } }, false);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(52), 1);
-            if (i > 0) lp.leftMargin = dp(6);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(60), 1);
+            if (i > 0) lp.leftMargin = dp(8);
             nav.addView(b2, lp);
         }
         mid.addView(nav, new LinearLayout.LayoutParams(-1, -2));
@@ -581,12 +581,11 @@ public class MainActivity extends Activity implements TvSession.Listener {
         FrameLayout mute = new FrameLayout(this);
         mute.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(36)));
         muteIcon = new Ui.IconView(this, Ui.I_UNMUTE, Ui.TX);
-        mute.addView(muteIcon, new FrameLayout.LayoutParams(dp(34), dp(34), Gravity.CENTER));
+        mute.addView(muteIcon, new FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER));
         Ui.button(mute, new Runnable() { public void run() { session.key(Keys.MUTE); } }, false);
-        mid.addView(mute, new LinearLayout.LayoutParams(dp(72), dp(72)));
-        TextView mt = Ui.text(this, "Mute", 12, Ui.MU, false);
-        mt.setPadding(0, dp(2), 0, dp(10));
-        mid.addView(mt);
+        mid.addView(mute, new LinearLayout.LayoutParams(dp(84), dp(84)));
+        View below = new View(this);
+        mid.addView(below, new LinearLayout.LayoutParams(0, dp(12)));
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, -1, 1);
         ml.leftMargin = dp(8); ml.rightMargin = dp(8);
         vols.addView(mid, ml);
@@ -819,6 +818,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         return t;
     }
 
+    private String lastLaunch = "";
     private final java.util.HashMap<View, long[]> lastOpen = new java.util.HashMap<View, long[]>();
 
     /** Sends a launch. Tapping the same tile again within 10 s tries the next way of opening it. */
@@ -830,6 +830,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         int idx = (st != null && now - st[0] < 10000) ? (int) ((st[1] + 1) % links.length) : 0;
         lastOpen.put(tile, new long[]{now, idx});
         String link = links[idx];
+        lastLaunch = link;
         session.launch(link);
         Object[] tag = (Object[]) tile.getTag();
         final TextView label = (TextView) tag[0];

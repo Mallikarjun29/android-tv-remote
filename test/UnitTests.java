@@ -38,12 +38,12 @@ public class UnitTests {
         eq("parse garbage ignored", AppStore.parse("junk\n\nA\t\t\n").size(), 0);
         eq("parse null", AppStore.parse(null).size(), 0);
         eq("builtin count consistent", BuiltinApps.NAMES.length + "," + BuiltinApps.LOGOS.length + "," + BuiltinApps.PACKAGES.length, "7,7,7");
-        eq("netflix tries deep link first", BuiltinApps.candidates(3, null)[0] + "|" + BuiltinApps.candidates(3, null).length, "netflix://|3");
+        eq("netflix tries deep link first", BuiltinApps.candidates(3, null)[0] + "|" + BuiltinApps.candidates(3, null).length, "netflix://|4");
         eq("netflix package link is in the list", Arrays.asList(BuiltinApps.candidates(3, null)).contains("market://launch?id=com.netflix.ninja"), true);
         eq("youtube first link", BuiltinApps.candidates(6, null)[0], "https://www.youtube.com");
-        eq("xstream uses package link only", Arrays.toString(BuiltinApps.candidates(0, null)), "[market://launch?id=tv.airtel.xstream.tvapp]");
-        eq("edited package overrides all", Arrays.toString(BuiltinApps.candidates(3, "com.x.y")), "[market://launch?id=com.x.y]");
-        eq("hotstar has package fallbacks", BuiltinApps.candidates(2, null).length, 3);
+        eq("xstream tries both package names then store page", Arrays.toString(BuiltinApps.candidates(0, null)), "[market://launch?id=com.airtel.tv, market://launch?id=tv.airtel.xstream.tvapp, market://details?id=com.airtel.tv]");
+        eq("edited package overrides all", Arrays.toString(BuiltinApps.candidates(3, "com.x.y")), "[market://launch?id=com.x.y, market://details?id=com.x.y]");
+        eq("hotstar has package fallbacks", BuiltinApps.candidates(2, null).length, 4);
         eq("digit keys", Keys.digit(0) + "," + Keys.digit(9), "7,16");
         System.out.println(fails == 0 ? "ALL PASS" : "FAILURES " + fails);
         System.exit(fails == 0 ? 0 : 1);

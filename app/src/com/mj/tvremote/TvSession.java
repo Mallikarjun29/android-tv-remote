@@ -41,6 +41,9 @@ public final class TvSession {
     /** The TV can report a focused text field right after connecting; do not jump to the keyboard for that. */
     public static final long IME_GRACE_MS = 4000;
     public volatile long connectedAt;
+    /** Home/Back make the TV launcher focus a text field; do not treat that as the user wanting the keyboard. */
+    public static final long KEY_QUIET_MS = 5000, LAUNCH_QUIET_MS = 10000;
+    public volatile long quietUntil;
     public volatile State state = State.IDLE;
     public String host, tvName, error;
     public int volume = -1, volumeMax = 100;
@@ -214,8 +217,19 @@ public final class TvSession {
 
     public void disconnect() { close(); state = State.IDLE; error = null; if (listener != null) listener.onStateChanged(); }
 
-    public void key(int code) { RemoteClient r = remote; if (r != null && state == State.CONNECTED) r.sendKey(code); }
+    private void quiet(long ms) { long u = System.currentTimeMillis() + ms; if (u > quietUntil) quietUntil = u; }
+    public void key(int code) {
+        if (code != Keys.UP && code != Keys.DOWN && code != Keys.LEFT && code != Keys.RIGHT && code != Keys.CENTER && code != Keys.ENTER && code != Keys.DEL)
+            quiet(KEY_QUIET_MS);
+        RemoteClient r = remote; if (r != null && state == State.CONNECTED) r.sendKey(code); }
+    /** True if a text-field focus event right now should switch to the Keyboard tab. */
+    public boolean imeAutoOpenAllowed(String pkg) {
+        long now = System.currentTimeMillis();
+        if (now - connectedAt < IME_GRACE_MS || now < quietUntil) return false;
+        return pkg == null || !pkg.toLowerCase().contains("launcher");
+    }
+
     public void keyDir(int code, int dir) { RemoteClient r = remote; if (r != null && state == State.CONNECTED) r.sendKey(code, dir); }
     public void text(String t) { RemoteClient r = remote; if (r != null && state == State.CONNECTED) r.sendText(t); }
-    public void launch(String link) { RemoteClient r = remote; if (r != null && state == State.CONNECTED) r.launch(link); }
+    public void launch(String link) { quiet(LAUNCH_QUIET_MS); RemoteClient r = remote; if (r != null && state == State.CONNECTED) r.launch(link); }
 }

@@ -43,6 +43,10 @@ app tiles try deep links first (Netflix, YouTube, Prime Video), tap again within
 and the app shows a message with the exact link it sent and when the TV rejects a command.
 The remote-screen mocks above show the v1.0 layout; the built v1.1 layout differs as described.
 
+## Changes in v1.2
+Keyboard auto-open no longer fires for focus events the TV raises by itself: it is suppressed for 5 s after any remote key (not D-pad/OK/Enter/Delete) and 10 s after an app launch, as well as 4 s after connecting and when the focused package is a launcher. A later real tap into a TV text field still opens it.
+Menu button removed (Back and Home are wider, Mute is bigger); the "Mute" caption is gone. Xstream tile tries `com.airtel.tv` (the Xstream app on Airtel's IPTV box) then `tv.airtel.xstream.tvapp`; every tile now ends with a Play Store page fallback. ZEE5 has no known alternate package, so it falls back to its store page.
+
 ## Build
 No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at the paths in `build.sh`.
 `./build.sh` produces a signed `build/TVRemote.apk` (it creates a keystore on first run; keep it so later builds can update the installed app).
