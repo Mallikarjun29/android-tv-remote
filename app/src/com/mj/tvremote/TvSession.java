@@ -24,6 +24,7 @@ public final class TvSession {
         void onStateChanged();
         void onVolume();
         void onImeFocus(String pkg);
+        void onTvError(String message);
     }
 
     public static final String CLIENT_NAME = "TV Remote";
@@ -37,6 +38,9 @@ public final class TvSession {
     private PairingClient pairing;
     private int gen; // bumps on every new attempt so stale callbacks are ignored
 
+    /** The TV can report a focused text field right after connecting; do not jump to the keyboard for that. */
+    public static final long IME_GRACE_MS = 4000;
+    public volatile long connectedAt;
     public volatile State state = State.IDLE;
     public String host, tvName, error;
     public int volume = -1, volumeMax = 100;
@@ -154,7 +158,9 @@ public final class TvSession {
                     if (listener != null) listener.onImeFocus(pkg);
                 } });
             }
-            public void onTvError(String m) {}
+            public void onTvError(final String m) {
+                main.post(new Runnable() { public void run() { if (g == gen && listener != null) listener.onTvError(m); } });
+            }
             public void onClosed(Exception e) { lost(g); }
         });
         try {
@@ -166,6 +172,7 @@ public final class TvSession {
         if (g != gen) { rc.close(); return true; }
         remote = rc;
         prefs.edit().putString("host", ip).putString("tvname", tvName == null ? ip : tvName).apply();
+        connectedAt = System.currentTimeMillis();
         set(State.CONNECTED, null);
         return true;
     }

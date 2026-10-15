@@ -135,9 +135,13 @@ public class MainActivity extends Activity implements TvSession.Listener {
 
     @Override public void onVolume() { updateVolume(); }
 
+    @Override public void onTvError(String message) {
+        Toast.makeText(this, "The TV rejected the last command", Toast.LENGTH_LONG).show();
+    }
+
     @Override public void onImeFocus(String pkg) {
         updateKeyboardBanner();
-        if (session.prefs().getBoolean("autoopen", true) && resumed) {
+        if (session.prefs().getBoolean("autoopen", true) && resumed && System.currentTimeMillis() - session.connectedAt > TvSession.IME_GRACE_MS) {
             kbGuard = true; kbField.setText(""); kbGuard = false; kbPrev = "";
             tab = 2;
             refresh();
@@ -550,46 +554,45 @@ public class MainActivity extends Activity implements TvSession.Listener {
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-1, dp(14));
         c.addView(dots, dlp);
 
-        // persistent bottom block
+        // persistent bottom block: VOL pill | (Back Home Menu / Mute) | CH pill
+        LinearLayout vols = new LinearLayout(this);
+        vols.setGravity(Gravity.CENTER_VERTICAL);
+        volPillNumber = new TextView[1];
+        vols.addView(pillControl("VOL", Keys.VOL_UP, Keys.VOL_DOWN, true), new LinearLayout.LayoutParams(dp(88), dp(220)));
+        LinearLayout mid = new LinearLayout(this);
+        mid.setOrientation(LinearLayout.VERTICAL);
+        mid.setGravity(Gravity.CENTER_HORIZONTAL);
         LinearLayout nav = new LinearLayout(this);
         int[] icons = {Ui.I_BACK, Ui.I_HOME, Ui.I_MENU};
         final int[] keys = {Keys.BACK, Keys.HOME, Keys.MENU};
         for (int i = 0; i < 3; i++) {
             final int k = keys[i];
-            FrameLayout b = new FrameLayout(this);
-            b.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(24)));
-            b.addView(new Ui.IconView(this, icons[i], Ui.TX), new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
-            Ui.button(b, new Runnable() { public void run() { session.key(k); } }, false);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(48), 1);
-            if (i > 0) lp.leftMargin = dp(10);
-            nav.addView(b, lp);
+            FrameLayout b2 = new FrameLayout(this);
+            b2.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(24)));
+            b2.addView(new Ui.IconView(this, icons[i], Ui.TX), new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+            Ui.button(b2, new Runnable() { public void run() { session.key(k); } }, false);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(52), 1);
+            if (i > 0) lp.leftMargin = dp(6);
+            nav.addView(b2, lp);
         }
-        LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(-1, -2);
-        nl.topMargin = dp(8);
-        c.addView(nav, nl);
-
-        LinearLayout vols = new LinearLayout(this);
-        vols.setGravity(Gravity.CENTER_VERTICAL);
-        vols.addView(pillControl("VOL", Keys.VOL_UP, Keys.VOL_DOWN), new LinearLayout.LayoutParams(dp(78), dp(140)));
-        LinearLayout mid = new LinearLayout(this);
-        mid.setOrientation(LinearLayout.VERTICAL);
-        mid.setGravity(Gravity.CENTER);
+        mid.addView(nav, new LinearLayout.LayoutParams(-1, -2));
+        View gap = new View(this);
+        mid.addView(gap, new LinearLayout.LayoutParams(0, 0, 1));
         FrameLayout mute = new FrameLayout(this);
-        mute.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(32)));
+        mute.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(36)));
         muteIcon = new Ui.IconView(this, Ui.I_UNMUTE, Ui.TX);
-        mute.addView(muteIcon, new FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER));
+        mute.addView(muteIcon, new FrameLayout.LayoutParams(dp(34), dp(34), Gravity.CENTER));
         Ui.button(mute, new Runnable() { public void run() { session.key(Keys.MUTE); } }, false);
-        mid.addView(mute, new LinearLayout.LayoutParams(dp(64), dp(64)));
+        mid.addView(mute, new LinearLayout.LayoutParams(dp(72), dp(72)));
         TextView mt = Ui.text(this, "Mute", 12, Ui.MU, false);
+        mt.setPadding(0, dp(2), 0, dp(10));
         mid.addView(mt);
-        volLabel = Ui.text(this, "", 12, Ui.MU, false);
-        LinearLayout.LayoutParams vl = new LinearLayout.LayoutParams(-2, -2);
-        vl.topMargin = dp(6);
-        mid.addView(volLabel, vl);
-        vols.addView(mid, new LinearLayout.LayoutParams(0, -2, 1));
-        vols.addView(pillControl("CH", Keys.CH_UP, Keys.CH_DOWN), new LinearLayout.LayoutParams(dp(78), dp(140)));
+        LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, -1, 1);
+        ml.leftMargin = dp(8); ml.rightMargin = dp(8);
+        vols.addView(mid, ml);
+        vols.addView(pillControl("CH", Keys.CH_UP, Keys.CH_DOWN, false), new LinearLayout.LayoutParams(dp(88), dp(220)));
         LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(-1, -2);
-        vlp.topMargin = dp(8);
+        vlp.topMargin = dp(6);
         c.addView(vols, vlp);
         layoutPages();
         return c;
@@ -601,29 +604,32 @@ public class MainActivity extends Activity implements TvSession.Listener {
         return l;
     }
 
-    private View pillControl(String label, final int up, final int down) {
+    private TextView[] volPillNumber;
+
+    private View pillControl(String label, final int up, final int down, boolean isVol) {
         LinearLayout p = new LinearLayout(this);
         p.setOrientation(LinearLayout.VERTICAL);
         p.setGravity(Gravity.CENTER_HORIZONTAL);
-        p.setBackground(Ui.round(Ui.CARD, dp(36)));
-        p.setPadding(0, dp(8), 0, dp(8));
-        TextView l1 = Ui.text(this, label, 12, Ui.MU, true);
-        l1.setGravity(Gravity.CENTER);
-        p.addView(l1, new LinearLayout.LayoutParams(-1, -2));
+        p.setBackground(Ui.round(Ui.CARD, dp(44)));
         View plus = halfButton(Ui.I_PLUS, up);
         View minus = halfButton(Ui.I_MINUS, down);
-        p.addView(plus, new LinearLayout.LayoutParams(-1, 0, 1));
-        p.addView(minus, new LinearLayout.LayoutParams(-1, 0, 1));
-        TextView l2 = Ui.text(this, label, 12, Ui.MU, true);
-        l2.setGravity(Gravity.CENTER);
-        p.addView(l2, new LinearLayout.LayoutParams(-1, -2));
+        p.addView(plus, new LinearLayout.LayoutParams(-1, 0, 1.2f));
+        TextView l1 = Ui.text(this, label, 15, Ui.TX, true);
+        l1.setGravity(Gravity.CENTER);
+        p.addView(l1, new LinearLayout.LayoutParams(-1, -2));
+        if (isVol) {
+            volLabel = Ui.text(this, "", 16, Ui.MU, true);
+            volLabel.setGravity(Gravity.CENTER);
+            p.addView(volLabel, new LinearLayout.LayoutParams(-1, dp(22)));
+        }
+        p.addView(minus, new LinearLayout.LayoutParams(-1, 0, 1.2f));
         return p;
     }
 
     private View halfButton(int icon, final int key) {
         FrameLayout f = new FrameLayout(this);
-        f.setBackground(Ui.pressable(Color.TRANSPARENT, Ui.CARD_PRESSED, dp(20)));
-        f.addView(new Ui.IconView(this, icon, Ui.TX), new FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER));
+        f.setBackground(Ui.pressable(Color.TRANSPARENT, Ui.CARD_PRESSED, dp(44)));
+        f.addView(new Ui.IconView(this, icon, Ui.TX), new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
         Ui.button(f, new Runnable() { public void run() { session.key(key); } }, true);
         return f;
     }
@@ -675,7 +681,14 @@ public class MainActivity extends Activity implements TvSession.Listener {
             echoText.append(k);
         }
         echo.setText(echoText.length() == 0 ? " " : echoText.toString());
+        main.removeCallbacks(clearEcho);
+        if (echoText.length() > 0) main.postDelayed(clearEcho, 2500);
     }
+
+    private final Runnable clearEcho = new Runnable() { public void run() {
+        echoText.setLength(0);
+        if (echo != null) echo.setText(" ");
+    } };
 
     private void layoutPages() {
         boolean showTouch = touchMode;
@@ -694,7 +707,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
 
     private void updateVolume() {
         if (volLabel == null) return;
-        volLabel.setText(session.volume >= 0 ? "Volume " + session.volume : "");
+        volLabel.setText(session.volume >= 0 ? String.valueOf(session.volume) : "");
         muteIcon.set(session.muted ? Ui.I_MUTE : Ui.I_UNMUTE, session.muted ? Ui.RED : Ui.TX);
     }
 
@@ -735,7 +748,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
             View t = tile(BuiltinApps.NAMES[i], logoRes, i == 3 ? 0xFF000000 : 0xFFFFFFFF, 0, false);
             final View tt = t;
             final String name = BuiltinApps.NAMES[i];
-            t.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openApp(tt, "market://launch?id=" + pkgFor(idx)); } });
+            t.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openApp(tt, BuiltinApps.candidates(idx, session.prefs().getString("pkg" + idx, null))); } });
             t.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { editBuiltin(idx); return true; } });
             tiles.add(t);
         }
@@ -744,7 +757,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
             final AppStore.Entry e = custom.get(i);
             final int ci = i;
             final View t = tile(e.name, 0, 0xFF28376B, e.isLink ? Ui.I_LINK : Ui.I_GRID, false);
-            t.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openApp(t, e.launchLink()); } });
+            t.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openApp(t, new String[]{e.launchLink()}); } });
             t.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { confirmDelete(ci, e); return true; } });
             tiles.add(t);
         }
@@ -806,9 +819,17 @@ public class MainActivity extends Activity implements TvSession.Listener {
         return t;
     }
 
-    private void openApp(final View tile, String link) {
+    private final java.util.HashMap<View, long[]> lastOpen = new java.util.HashMap<View, long[]>();
+
+    /** Sends a launch. Tapping the same tile again within 10 s tries the next way of opening it. */
+    private void openApp(final View tile, String[] links) {
         if (!connected()) return;
         Ui.haptic(tile);
+        long now = System.currentTimeMillis();
+        long[] st = lastOpen.get(tile);
+        int idx = (st != null && now - st[0] < 10000) ? (int) ((st[1] + 1) % links.length) : 0;
+        lastOpen.put(tile, new long[]{now, idx});
+        String link = links[idx];
         session.launch(link);
         Object[] tag = (Object[]) tile.getTag();
         final TextView label = (TextView) tag[0];
@@ -816,6 +837,10 @@ public class MainActivity extends Activity implements TvSession.Listener {
         label.setText("Opening...");
         label.setTextColor(Ui.ACC);
         main.postDelayed(new Runnable() { public void run() { label.setText(name); label.setTextColor(Ui.TX); } }, 2500);
+        String msg = "Sent to TV: " + link;
+        if (links.length > 1) msg += "  (" + (idx + 1) + "/" + links.length + "). Nothing opened? Tap again to try another way.";
+        else msg += ". Nothing opened? The app may not be installed.";
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
     }
 
     private void editBuiltin(final int idx) {

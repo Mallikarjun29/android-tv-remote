@@ -116,6 +116,8 @@ async def remote(r, w):
             x = RemoteMessage(); x.remote_ime_batch_edit.ime_counter = 4; x.remote_ime_batch_edit.field_counter = 9
             w.write(frame(x)); await w.drain()
         ime_started = False
+        if RP == 6466:  # real TVs can report a focused field right at connect; the app must not jump to the keyboard for it
+            x = RemoteMessage(); x.remote_ime_key_inject.app_info.app_package = "com.google.android.tvlauncher"; w.write(frame(x)); await w.drain()
         while True:
             m = RemoteMessage(); m.ParseFromString(await read_frame(r))
             if m.HasField("remote_ping_response"): log(ev="pong", val1=m.remote_ping_response.val1)

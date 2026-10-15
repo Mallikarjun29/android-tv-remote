@@ -28,6 +28,13 @@ Brand logos are from Wikimedia Commons. Trademarks belong to their owners.
 These are design mocks. Differences in the built app: the "suggestions" list under Add custom app is not built, and the
 "app isn't installed" banner is not shown (the protocol gives no way to know). Pairing shows the code box only after you tap Connect and the TV shows its code.
 
+## Changes in v1.1
+Opens on the Remote tab (a TV focus event right after connecting no longer jumps to Keyboard); swipe between D-pad and keypad works anywhere on the page;
+keypad digits clear after 2.5 s idle; bigger VOL / CH pills (+ top, - bottom, live volume number in the VOL pill), Back/Home/Menu and Mute in the middle column;
+app tiles try deep links first (Netflix, YouTube, Prime Video), tap again within 10 s to try the next way, corrected package names (Xstream `tv.airtel.xstream.tvapp`, JioHotstar `in.startv.hotstartvonly`),
+and the app shows a message with the exact link it sent and when the TV rejects a command.
+The remote-screen mocks above show the v1.0 layout; the built v1.1 layout differs as described.
+
 ## Build
 No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at the paths in `build.sh`.
 `./build.sh` produces a signed `build/TVRemote.apk` (it creates a keystore on first run; keep it so later builds can update the installed app).

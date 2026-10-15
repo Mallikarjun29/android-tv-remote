@@ -319,22 +319,33 @@ public final class Ui {
         private float x0, y0;
         private boolean fired;
         public SwipeFrame(Context c) { super(c); }
-        @Override public boolean onInterceptTouchEvent(MotionEvent e) {
-            if (!enabled) return false;
+
+        private boolean track(MotionEvent e) {
             switch (e.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN: x0 = e.getX(); y0 = e.getY(); fired = false; break;
+                case MotionEvent.ACTION_DOWN: x0 = e.getX(); y0 = e.getY(); fired = false; return false;
                 case MotionEvent.ACTION_MOVE:
                     float dx = e.getX() - x0, dy = e.getY() - y0;
-                    if (!fired && Math.abs(dx) > dp(getContext(), 60) && Math.abs(dx) > 2 * Math.abs(dy)) {
+                    if (!fired && Math.abs(dx) > dp(getContext(), 40) && Math.abs(dx) > 1.5f * Math.abs(dy)) {
                         fired = true;
                         if (cb != null) cb.swiped(dx < 0);
                         return true;
                     }
-                    break;
+                    return fired;
             }
-            return false;
+            return fired;
         }
-        @Override public boolean onTouchEvent(MotionEvent e) { return fired || super.onTouchEvent(e); }
+
+        @Override public boolean onInterceptTouchEvent(MotionEvent e) {
+            if (!enabled) return false;
+            return track(e);
+        }
+
+        /** Also sees touches no child wanted (the empty area around the D-pad), so swipes work anywhere on the page. */
+        @Override public boolean onTouchEvent(MotionEvent e) {
+            if (!enabled) return false;
+            track(e);
+            return true;
+        }
     }
 
     public static void gravityCenter(TextView t) { t.setGravity(Gravity.CENTER); }

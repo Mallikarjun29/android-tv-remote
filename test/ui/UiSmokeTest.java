@@ -82,8 +82,9 @@ public class UiSmokeTest {
         click(text(a, "Pair"));
         check("correct code connects: Connected status + TV controls", waitFor(a, "Connected", 10000) && has(a, "Mute"));
         pump(1500);
+        check("TV focus event right after connect does NOT switch to Keyboard tab (stays on Remote)", has(a, "Mute") && !has(a, "Type on TV"));
         
-        check("volume from TV shown (Volume 18)", has(a, "Volume 18"));
+        check("live volume number 18 shown inside the VOL pill", has(a, "18"));
         // D-pad up (top of circle) and center
         View dpad = byClass(a, "DPadView", 0);
         check("d-pad rendered", dpad != null);
@@ -101,10 +102,26 @@ public class UiSmokeTest {
         check("keypad page opens", has(a, "OK") && has(a, "5"));
         touch(text(a, "5"), 5, 5); touch(text(a, "0"), 5, 5);
         check("keypad echoes digits locally", has(a, "50"));
+        ShadowLooper.idleMainLooper(3, java.util.concurrent.TimeUnit.SECONDS);
+        check("keypad echo auto-clears after idle (new number replaces old)", !has(a, "50"));
         touch(text(a, "OK"), 5, 5);
         pump(300);
         check("TV got digit 5 (key 12), 0 (key 7), OK (23)", logHas("\"code\": 12,") && logHas("\"code\": 7,"));
         click(text(a, "D-pad"));
+        // page swipe on the empty area of the page (outside the d-pad circle)
+        View sf = byClass(a, "SwipeFrame", 0);
+        long ts = SystemClock.uptimeMillis();
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts, MotionEvent.ACTION_DOWN, 600, 100, 0));
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 20, MotionEvent.ACTION_MOVE, 450, 105, 0));
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 40, MotionEvent.ACTION_MOVE, 200, 110, 0));
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 60, MotionEvent.ACTION_UP, 200, 110, 0));
+        check("swipe left (even on empty area) opens keypad page", has(a, "OK") && has(a, "D-pad"));
+        ts = SystemClock.uptimeMillis();
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts, MotionEvent.ACTION_DOWN, 200, 100, 0));
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 20, MotionEvent.ACTION_MOVE, 300, 100, 0));
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 40, MotionEvent.ACTION_MOVE, 600, 100, 0));
+        sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 60, MotionEvent.ACTION_UP, 600, 100, 0));
+        check("swipe right returns to d-pad page", has(a, "123") && !has(a, "OK"));
         // power and bottom block
         View power = null;
         for (View v : all(a)) if (v instanceof android.widget.FrameLayout && v.getClass() == android.widget.FrameLayout.class && v.isClickable() && v.getWidth() == 0) { }
@@ -137,10 +154,33 @@ public class UiSmokeTest {
         // Apps tab
         click(text(a, "Apps"));
         check("apps grid shows 7 built-ins + add tile", has(a, "Airtel Xstream") && has(a, "ZEE5") && has(a, "JioHotstar") && has(a, "Netflix") && has(a, "Prime Video") && has(a, "Apple TV+") && has(a, "YouTube") && has(a, "Add custom app"));
+        pump(4000); // past the post-connect grace period
         click(text(a, "Netflix"));
         check("tile shows Opening...", has(a, "Opening..."));
         pump(400);
-        check("TV got launch link for Netflix", logHas("market://launch?id=com.netflix.ninja"));
+        check("TV got Netflix launch (deep link first)", logHas("\"link\": \"netflix://\""));
+        // keyboard auto-open from TV IME focus
+        check("IME focus from TV auto-opens Keyboard tab", waitFor(a, "Type on TV", 8000) && has(a, "Typing to: com.netflix.ninja"));
+        EditText kb = edit(a, 0);
+        kb.setText("hi");
+        pump(300);
+        check("typed text sent live", logHas("\"value\": \"hi\""));
+        kb.setText("h");
+        pump(300);
+        check("backspace sent as DEL key (67)", logHas("\"code\": 67,"));
+        click(text(a, "Send"));
+        pump(300);
+        check("Send presses Enter (66)", logHas("\"code\": 66,"));
+        click(text(a, "Auto-open: ON"));
+        check("auto-open toggle turns OFF", has(a, "Auto-open: OFF"));
+        click(text(a, "Apps"));
+        pump(200);
+        click(text(a, "Opening...") != null ? text(a, "Opening...") : text(a, "Netflix"));
+        pump(300);
+        check("tapping again tries the next way (netflix title link)", logHas("https://www.netflix.com/title/?source=30"));
+        click(text(a, "Opening...") != null ? text(a, "Opening...") : text(a, "Netflix"));
+        pump(300);
+        check("third tap tries the package link", logHas("market://launch?id=com.netflix.ninja"));
         // add custom link
         click(text(a, "Add custom app"));
         AlertDialog d = ShadowAlertDialog.getLatestAlertDialog();
@@ -156,20 +196,6 @@ public class UiSmokeTest {
         click(text(a, "Cricket highlights"));
         pump(400);
         check("TV got custom link launch (https normalized)", logHas("https://youtube.com/watch?v=abc"));
-        // keyboard auto-open from TV IME focus
-        check("IME focus from TV auto-opens Keyboard tab", waitFor(a, "Type on TV", 6000) && has(a, "Typing to: com.netflix.ninja"));
-        EditText kb = edit(a, 0);
-        kb.setText("hi");
-        pump(300);
-        check("typed text sent live", logHas("\"value\": \"hi\""));
-        kb.setText("h");
-        pump(300);
-        check("backspace sent as DEL key (67)", logHas("\"code\": 67,"));
-        click(text(a, "Send"));
-        pump(300);
-        check("Send presses Enter (66)", logHas("\"code\": 66,"));
-        click(text(a, "Auto-open: ON"));
-        check("auto-open toggle turns OFF", has(a, "Auto-open: OFF"));
         System.out.println("UI FLOW DONE");
     }
 }
