@@ -1,21 +1,28 @@
-# TV Remote (Android)
+# TV Remote
 
-A phone remote for Android TV / Google TV. Original code and design, written against the Android TV Remote v2 protocol
-(pairing on port 6467, remote on 6466, TLS with a client certificate, protobuf messages).
+### Your phone, but a better Android TV remote. Built entirely by an AI agent, in about an hour.
 
-**Features:** pairing with the on-screen code, D-pad, touch mode, keypad, VOL / CH, Mute, power, Apps grid
-(Airtel Xstream, ZEE5, JioHotstar, Netflix, Prime Video, Apple TV+, YouTube) with custom apps and custom links,
-and a keyboard tab that opens by itself when a text field gets focus on the TV.
+No human wrote a line of this. One chat, one agent: scoping, ten rounds of design mocks, a from-scratch implementation of the Android TV Remote v2 protocol, the UI, a signed APK, tests, and this repo. Then it was paired with a real TV and fixed live from real-TV feedback.
+
+**Tested on a real TV.** Paired, connected and controlling an Airtel Xstream box. Remote keys, VOL, mute, app launching and the keyboard all run on real hardware.
+
+## What it does
+- **Pair in seconds** with the code your TV shows
+- **Remote, touch and keypad.** D-pad, a touchpad mode, and a number pad one swipe away
+- **Big VOL and CH pills** with a live volume readout, hold to repeat
+- **Apps grid** with real logos: Airtel Xstream, ZEE5, JioHotstar, Netflix, Prime Video, Apple TV+, YouTube. Add your own apps or any link
+- **Type on your phone.** The keyboard opens when you tap a text field on the TV, and stays out of the way otherwise
+- **Honest errors.** If the TV rejects a launch, you see exactly what was sent
+
+## How it was built
+- Original code and design, plain Java and Android views. No Gradle, no third-party libraries
+- Our own protocol client: TLS pairing on port 6467, remote on port 6466, protobuf messages by hand
+- Checked against an independent open-source implementation (a mock TV built on `androidtvremote2`), plus unit tests and a Robolectric UI run of the real activity
+- Shipped as signed releases, then iterated from the owner's real-TV reports: v1.0 to v1.2 in the same sitting
+
+Good to know: Netflix, YouTube and Prime Video tiles launch on the test TV. Xstream and ZEE5 depend on which package names the TV has installed (editable with a long-press on a tile).
 
 Brand logos are from Wikimedia Commons. Trademarks belong to their owners.
-
-## How it was made
-This app was designed, coded, built and tested entirely by an AI agent (Instinct), working with its owner over chat, in about an hour:
-scoping, ten rounds of design mocks, the Android TV Remote v2 protocol layer, the UI, the signed APK and this repo.
-No Gradle, no libraries: plain Java and Android views, built with the Android SDK command-line tools.
-
-**Tested on a real TV:** the owner paired it with his Android TV and confirmed connection and remote keys working.
-Netflix, YouTube and Prime Video tiles launch on it; the Xstream and ZEE5 tiles depend on the TV's installed package names (editable in the app with a long-press).
 
 ## Design
 
@@ -33,19 +40,12 @@ Netflix, YouTube and Prime Video tiles launch on it; the Xstream and ZEE5 tiles 
 |---|---|---|
 | ![No TV](mocks/v10-7-no-tv-found.png) | ![Custom app](mocks/v11-8-custom-app-tab.png) | ![Custom link](mocks/v11-9-custom-link-tab.png) |
 
-These are design mocks. Differences in the built app: the "suggestions" list under Add custom app is not built, and the
-"app isn't installed" banner is not shown (the protocol gives no way to know). Pairing shows the code box only after you tap Connect and the TV shows its code.
+## Release notes
+- **v1.2**: keyboard no longer jumps in after Home, Back, volume or an app launch; Menu button removed, Back, Home and Mute bigger, "Mute" caption gone; Xstream tile tries `com.airtel.tv` then `tv.airtel.xstream.tvapp`; every tile ends with a Play Store fallback.
+- **v1.1**: opens on the Remote tab, swipe to keypad works anywhere, keypad digits clear after 2.5 s, bigger VOL/CH pills, deep-link-first app launching, visible launch and rejection messages.
+- **v1.0**: first build.
 
-## Changes in v1.1
-Opens on the Remote tab (a TV focus event right after connecting no longer jumps to Keyboard); swipe between D-pad and keypad works anywhere on the page;
-keypad digits clear after 2.5 s idle; bigger VOL / CH pills (+ top, - bottom, live volume number in the VOL pill), Back/Home/Menu and Mute in the middle column;
-app tiles try deep links first (Netflix, YouTube, Prime Video), tap again within 10 s to try the next way, corrected package names (Xstream `tv.airtel.xstream.tvapp`, JioHotstar `in.startv.hotstartvonly`),
-and the app shows a message with the exact link it sent and when the TV rejects a command.
-The remote-screen mocks above show the v1.0 layout; the built v1.1 layout differs as described.
-
-## Changes in v1.2
-Keyboard auto-open no longer fires for focus events the TV raises by itself: it is suppressed for 5 s after any remote key (not D-pad/OK/Enter/Delete) and 10 s after an app launch, as well as 4 s after connecting and when the focused package is a launcher. A later real tap into a TV text field still opens it.
-Menu button removed (Back and Home are wider, Mute is bigger); the "Mute" caption is gone. Xstream tile tries `com.airtel.tv` (the Xstream app on Airtel's IPTV box) then `tv.airtel.xstream.tvapp`; every tile now ends with a Play Store page fallback. ZEE5 has no known alternate package, so it falls back to its store page.
+Note: the mocks above are the original design; the built layout differs slightly (no Menu button, no suggestions list under Add custom app, no "not installed" banner).
 
 ## Build
 No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at the paths in `build.sh`.
@@ -54,4 +54,4 @@ No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at
 ## Tests
 - `test/run_protocol_test.sh`: the Java pairing and remote client against a mock TV (Python, built on the open-source `androidtvremote2` protobuf definitions as an independent check of the wire format).
 - `test/UnitTests.java`: text diff, custom app storage, link and package validation.
-- `test/ui/run_ui_test.sh`: Robolectric run of the real activity against the mock TV (pairing, wrong code, d-pad, touch pad, keypad, bottom buttons, apps, custom link, keyboard auto-open and live typing).
+- `rob/run_ui_test.sh`: Robolectric run of the real activity against the mock TV (pairing, wrong code, d-pad, touch pad, keypad, bottom buttons, apps, custom link, keyboard auto-open and live typing).
