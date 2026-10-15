@@ -9,6 +9,14 @@ and a keyboard tab that opens by itself when a text field gets focus on the TV.
 
 Brand logos are from Wikimedia Commons. Trademarks belong to their owners.
 
+## How it was made
+This app was designed, coded, built and tested entirely by an AI agent (Instinct), working with its owner over chat, in about an hour:
+scoping, ten rounds of design mocks, the Android TV Remote v2 protocol layer, the UI, the signed APK and this repo.
+No Gradle, no libraries: plain Java and Android views, built with the Android SDK command-line tools.
+
+**Tested on a real TV:** the owner paired it with his Android TV and confirmed connection and remote keys working.
+Still being verified on the real TV: app-tile launching (some tiles did not open in v1.0; v1.1 changes the launch links and shows what was sent), mDNS discovery, keyboard auto-open.
+
 ## Design
 
 ![Overview of all screens](mocks/v11-overview.png)
@@ -44,7 +52,7 @@ No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at
 - `test/UnitTests.java`: text diff, custom app storage, link and package validation.
 - `test/ui/run_ui_test.sh`: Robolectric run of the real activity against the mock TV (pairing, wrong code, d-pad, touch pad, keypad, bottom buttons, apps, custom link, keyboard auto-open and live typing).
 
-## Not verified without a real TV
-Real pairing and control, mDNS discovery on a real network, keyboard auto-open on a real TV, whether each app opens
+## Not yet verified on the real TV
+mDNS discovery on a real network, keyboard auto-open on a real TV, whether each app opens
 (package names are best guesses, editable in the app with a long-press), real Wi-Fi behaviour, and how the UI looks and feels on a real phone.
 Checklist: `docs/TV_TEST_CHECKLIST.md`.
