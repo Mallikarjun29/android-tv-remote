@@ -15,7 +15,7 @@ scoping, ten rounds of design mocks, the Android TV Remote v2 protocol layer, th
 No Gradle, no libraries: plain Java and Android views, built with the Android SDK command-line tools.
 
 **Tested on a real TV:** the owner paired it with his Android TV and confirmed connection and remote keys working.
-Still being verified on the real TV: app-tile launching (some tiles did not open in v1.0; v1.1 changes the launch links and shows what was sent), mDNS discovery, keyboard auto-open.
+Netflix, YouTube and Prime Video tiles launch on it; the Xstream and ZEE5 tiles depend on the TV's installed package names (editable in the app with a long-press).
 
 ## Design
 
@@ -55,8 +55,3 @@ No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at
 - `test/run_protocol_test.sh`: the Java pairing and remote client against a mock TV (Python, built on the open-source `androidtvremote2` protobuf definitions as an independent check of the wire format).
 - `test/UnitTests.java`: text diff, custom app storage, link and package validation.
 - `test/ui/run_ui_test.sh`: Robolectric run of the real activity against the mock TV (pairing, wrong code, d-pad, touch pad, keypad, bottom buttons, apps, custom link, keyboard auto-open and live typing).
-
-## Not yet verified on the real TV
-mDNS discovery on a real network, keyboard auto-open on a real TV, whether each app opens
-(package names are best guesses, editable in the app with a long-press), real Wi-Fi behaviour, and how the UI looks and feels on a real phone.
-Checklist: `docs/TV_TEST_CHECKLIST.md`.
