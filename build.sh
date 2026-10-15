@@ -12,7 +12,8 @@ cp $B/base.apk $B/unsigned.apk
 (cd $B/dex && zip -q -j $B/unsigned.apk classes.dex)
 $BT/zipalign -f -p 4 $B/unsigned.apk $B/aligned.apk
 KS=$H/keystore/release.jks
-if [ ! -f $KS ]; then mkdir -p $H/keystore; $JDK/keytool -genkeypair -keystore $KS -storepass tvremote-ks-pass -keypass tvremote-ks-pass -alias tvremote -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=TV Remote, O=Mallikarjun" ; fi
-$JDK/java -jar $BT/lib/apksigner.jar sign --ks $KS --ks-pass pass:tvremote-ks-pass --key-pass pass:tvremote-ks-pass --out $B/TVRemote.apk $B/aligned.apk
+: "${KS_PASS:?set KS_PASS to your keystore password (used to create or open keystore/release.jks)}"
+if [ ! -f $KS ]; then mkdir -p $H/keystore; $JDK/keytool -genkeypair -keystore $KS -storepass $KS_PASS -keypass $KS_PASS -alias tvremote -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=TV Remote, O=Mallikarjun" ; fi
+$JDK/java -jar $BT/lib/apksigner.jar sign --ks $KS --ks-pass pass:$KS_PASS --key-pass pass:$KS_PASS --out $B/TVRemote.apk $B/aligned.apk
 $JDK/java -jar $BT/lib/apksigner.jar verify --verbose $B/TVRemote.apk
 ls -l $B/TVRemote.apk

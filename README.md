@@ -44,12 +44,15 @@ These are the design mocks, one per page. The built app differs slightly: no Men
 
 ## Build
 No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at the paths in `build.sh`.
-`./build.sh` produces a signed `build/TVRemote.apk` (it creates a keystore on first run; keep it so later builds can update the installed app).
+Set a keystore password, then build: `KS_PASS=yourpassword ./build.sh`. It produces a signed `build/TVRemote.apk` and creates a keystore on first run; keep that keystore (and its password) so later builds can update the installed app.
 
 ## Tests
 - `test/run_protocol_test.sh`: the Java pairing and remote client against a mock TV (Python, built on the open-source `androidtvremote2` protobuf definitions as an independent check of the wire format).
 - `test/UnitTests.java`: text diff, custom app and favourite storage, link and package validation.
 - `rob/run_ui_test.sh`: Robolectric run of the real activity against the mock TV (pairing, wrong code, d-pad, touch pad, keypad, bottom buttons, apps, custom link, keyboard auto-open and live typing).
+
+## License
+MIT. See [LICENSE](LICENSE). Copyright (c) 2026 Mallikarjun Jamadarkhani.
 
 ## Credits
 Built with [Instinct](https://instinct.com): the Instinct agent that designed, coded, tested and shipped this app, and the Instinct team who gave Mallikarjun Jamadarkhani the access to try it out. Idea, direction and real-TV testing by Mallikarjun Jamadarkhani.
