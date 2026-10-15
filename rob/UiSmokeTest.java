@@ -97,6 +97,14 @@ public class UiSmokeTest {
         touch(dpad, 390, 390);   // center
         pump(400);
         check("TV got UP/DOWN/LEFT/RIGHT/CENTER from d-pad", logHas("\"code\": 19, \"dir\": 3") && logHas("\"code\": 20, \"dir\": 3") && logHas("\"code\": 21, \"dir\": 3") && logHas("\"code\": 22, \"dir\": 3") && logHas("\"code\": 23, \"dir\": 3"));
+        int dpBefore = log().size();
+        long td = SystemClock.uptimeMillis();
+        dpad.dispatchTouchEvent(MotionEvent.obtain(td, td, MotionEvent.ACTION_DOWN, 680, 390, 0));
+        dpad.dispatchTouchEvent(MotionEvent.obtain(td, td + 30, MotionEvent.ACTION_MOVE, 300, 395, 0));
+        pump(500);
+        dpad.dispatchTouchEvent(MotionEvent.obtain(td, td + 540, MotionEvent.ACTION_UP, 300, 395, 0));
+        pump(300);
+        check("swipe starting on the D-pad sends no key", log().size() == dpBefore);
         // keypad
         click(text(a, "123"));
         check("keypad page opens", has(a, "OK") && has(a, "5"));
@@ -150,10 +158,10 @@ public class UiSmokeTest {
             boolean icon = false; ViewGroup g = (ViewGroup) v; for (int i = 0; i < g.getChildCount(); i++) if (g.getChildAt(i).getClass().getSimpleName().equals("IconView")) icon = true;
             if (icon) btns.add(v);
         }
-        check("8 icon buttons on remote (power, back, home, vol+/-, mute, ch+/-), no Menu", btns.size() == 8);
+        check("9 icon buttons on remote (power, back, home, vol+/-, last channel, mute, ch+/-), no Menu", btns.size() == 9);
         for (View b : btns) touch(b, 5, 5);
         pump(400);
-        check("power/back/home/vol/mute/ch keys reach TV (26,4,3,24,25,164,166,167)", logHas("\"code\": 26,") && logHas("\"code\": 4,") && logHas("\"code\": 3,") && logHas("\"code\": 24,") && logHas("\"code\": 25,") && logHas("\"code\": 164,") && logHas("\"code\": 166,") && logHas("\"code\": 167,"));
+        check("power/back/home/vol/last-channel/mute/ch keys reach TV (26,4,3,229,24,25,164,166,167)", logHas("\"code\": 26,") && logHas("\"code\": 4,") && logHas("\"code\": 3,") && logHas("\"code\": 24,") && logHas("\"code\": 25,") && logHas("\"code\": 164,") && logHas("\"code\": 166,") && logHas("\"code\": 167,") && logHas("\"code\": 229,"));
         pump(1500);
         check("TV text-field focus right after Home does NOT jump to Keyboard tab", has(a, "VOL") && !has(a, "Type on TV"));
         // touch mode

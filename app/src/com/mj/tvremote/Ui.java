@@ -63,13 +63,15 @@ public final class Ui {
     public static void haptic(View v) { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); }
 
     /** Makes a view act as a button: pressed state, haptic tick, and optional press-and-hold repeat. */
+    /** Fires on release, and only if the finger did not travel (a swipe over the button never presses it).
+     *  With repeat, holding still for 0.35 s fires once and then repeats until release. */
     public static void button(final View v, final Runnable action, final boolean repeat) {
         final Handler h = new Handler(Looper.getMainLooper());
         final Runnable[] rep = new Runnable[1];
-        final boolean[] st = new boolean[3]; // 0 fired, 1 cancelled by movement, 2 down
+        final boolean[] st = new boolean[3]; // 0 fired, 1 cancelled, 2 down
         final float[] xy = new float[2];
-        final Runnable first = new Runnable() { public void run() {
-            if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(v); action.run(); if (repeat) h.postDelayed(rep[0], 360); }
+        final Runnable holdStart = new Runnable() { public void run() {
+            if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(v); action.run(); h.postDelayed(rep[0], 130); }
         } };
         rep[0] = new Runnable() { public void run() { if (!st[2] || st[1]) return; action.run(); h.postDelayed(rep[0], 130); } };
         v.setClickable(true);
@@ -79,20 +81,20 @@ public final class Ui {
                     case MotionEvent.ACTION_DOWN:
                         st[0] = false; st[1] = false; st[2] = true; xy[0] = e.getRawX(); xy[1] = e.getRawY();
                         view.setPressed(true);
-                        h.postDelayed(first, 90); // brief wait so a swipe that starts on a button never fires it
+                        if (repeat) h.postDelayed(holdStart, 350);
                         return true;
                     case MotionEvent.ACTION_MOVE:
-                        if (!st[1] && (Math.abs(e.getRawX() - xy[0]) > dp(view.getContext(), 10) || Math.abs(e.getRawY() - xy[1]) > dp(view.getContext(), 10))) {
-                            st[1] = true; view.setPressed(false); h.removeCallbacks(first); h.removeCallbacks(rep[0]);
+                        if (!st[1] && (Math.abs(e.getRawX() - xy[0]) > dp(view.getContext(), 6) || Math.abs(e.getRawY() - xy[1]) > dp(view.getContext(), 6))) {
+                            st[1] = true; view.setPressed(false); h.removeCallbacks(holdStart); h.removeCallbacks(rep[0]);
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
-                        h.removeCallbacks(first);
-                        if (!st[0] && !st[1]) first.run();
-                        st[2] = false; view.setPressed(false); h.removeCallbacks(rep[0]);
+                        h.removeCallbacks(holdStart); h.removeCallbacks(rep[0]);
+                        if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(view); action.run(); }
+                        st[2] = false; view.setPressed(false);
                         return true;
                     case MotionEvent.ACTION_CANCEL:
-                        st[1] = true; st[2] = false; h.removeCallbacks(first); h.removeCallbacks(rep[0]); view.setPressed(false);
+                        st[1] = true; st[2] = false; h.removeCallbacks(holdStart); h.removeCallbacks(rep[0]); view.setPressed(false);
                         return true;
                 }
                 return true;
@@ -199,7 +201,8 @@ public final class Ui {
         private final Callback cb;
         private int down = 0; // 0 none, else key code
         private final Handler h = new Handler(Looper.getMainLooper());
-        private final Runnable rep = new Runnable() { public void run() { if (down != 0) { cb.key(down); h.postDelayed(this, 130); } } };
+        private boolean fired, cancelled; private float px, py;
+        private final Runnable rep = new Runnable() { public void run() { if (down != 0 && !cancelled) { fired = true; cb.key(down); h.postDelayed(this, 130); } } };
 
         public DPadView(Context c, Callback cb) { super(c); this.cb = cb; }
 
@@ -212,17 +215,30 @@ public final class Ui {
             return dy > 0 ? Keys.DOWN : Keys.UP;
         }
 
+        /** Sends on release, and only if the finger stayed put; holding an arrow repeats it. */
         @Override public boolean onTouchEvent(MotionEvent e) {
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     down = hit(e.getX(), e.getY());
                     if (down == 0) return false;
-                    haptic(this); cb.key(down); invalidate();
-                    if (down != Keys.CENTER) h.postDelayed(rep, 450);
+                    fired = false; cancelled = false; px = e.getRawX(); py = e.getRawY();
+                    invalidate();
+                    if (down != Keys.CENTER) h.postDelayed(rep, 400);
                     return true;
-                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_MOVE:
+                    if (!cancelled && (Math.abs(e.getRawX() - px) > dp(getContext(), 8) || Math.abs(e.getRawY() - py) > dp(getContext(), 8))) {
+                        cancelled = true; h.removeCallbacks(rep); down = 0; invalidate();
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP: {
+                    h.removeCallbacks(rep);
+                    int k = down; boolean send = k != 0 && !fired && !cancelled && e.getActionMasked() == MotionEvent.ACTION_UP;
+                    down = 0; invalidate();
+                    if (send) { haptic(this); cb.key(k); }
+                    return true;
+                }
                 case MotionEvent.ACTION_CANCEL:
-                    down = 0; h.removeCallbacks(rep); invalidate(); return true;
+                    h.removeCallbacks(rep); cancelled = true; down = 0; invalidate(); return true;
             }
             return true;
         }
