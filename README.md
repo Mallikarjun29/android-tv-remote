@@ -1,8 +1,8 @@
 # TV Remote
 
-### This app was built using WhatsApp. An AI agent coded it, start to finish, within 2 hours.
+### This app was built using WhatsApp. An AI agent took it from first idea to finished app within 2 hours.
 
-An Android TV remote for your phone, designed, coded, tested and shipped through one WhatsApp conversation. No laptop, no IDE: the owner sent ideas, screenshots and real-TV feedback from his phone, and the Instinct agent answered with design mocks, code, tests and a new signed APK each round. Agentic-coded within 2 hours, then tested on a real TV.
+An Android TV remote for your phone, designed, coded, tested and shipped through one WhatsApp conversation. No laptop, no IDE: the owner sent ideas, screenshots and real-TV feedback from his phone, and the Instinct agent answered with design mocks, code, tests and a new signed APK each round. Agentic-coded, from ideation to the final complete app, within 2 hours, and tested on a real TV along the way.
 
 **Tested on a real TV.** Paired, connected and controlling an Airtel Xstream box. Remote keys, volume, mute, Netflix, YouTube and Prime Video launching, and the keyboard all run on real hardware.
 
