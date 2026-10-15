@@ -2,7 +2,7 @@
 
 ### Your phone, but a better Android TV remote. Built entirely by an AI agent, in about an hour.
 
-No human wrote a line of this. One chat, one agent: scoping, ten rounds of design mocks, a from-scratch implementation of the Android TV Remote v2 protocol, the UI, a signed APK, tests, and this repo. Then it was paired with a real TV and fixed live from real-TV feedback.
+No human wrote a line of this. Built with **Instinct**, the AI agent, and the team behind it, which made this possible. One chat, one agent: scoping, ten rounds of design mocks, a from-scratch implementation of the Android TV Remote v2 protocol, the UI, a signed APK, tests, and this repo. Then it was paired with a real TV and fixed live from real-TV feedback.
 
 **Tested on a real TV.** Paired, connected and controlling an Airtel Xstream box. Remote keys, VOL, mute, app launching and the keyboard all run on real hardware.
 
@@ -57,3 +57,6 @@ No Gradle. Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0) at
 - `test/run_protocol_test.sh`: the Java pairing and remote client against a mock TV (Python, built on the open-source `androidtvremote2` protobuf definitions as an independent check of the wire format).
 - `test/UnitTests.java`: text diff, custom app storage, link and package validation.
 - `rob/run_ui_test.sh`: Robolectric run of the real activity against the mock TV (pairing, wrong code, d-pad, touch pad, keypad, bottom buttons, apps, custom link, keyboard auto-open and live typing).
+
+## Credits
+Built with Instinct - the AI agent that designed, coded, tested and shipped this app, and the team behind it that made it possible. Idea, direction and real-TV testing by Mallikarjun Jamadarkhani.
