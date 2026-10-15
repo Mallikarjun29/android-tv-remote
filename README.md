@@ -41,6 +41,7 @@ Brand logos are from Wikimedia Commons. Trademarks belong to their owners.
 | ![No TV](mocks/v10-7-no-tv-found.png) | ![Custom app](mocks/v11-8-custom-app-tab.png) | ![Custom link](mocks/v11-9-custom-link-tab.png) |
 
 ## Release notes
+- **v1.3**: always opens on the Remote tab; keyboard auto-open now needs a text field to stay focused for 1.2 s with no commands sent, and any key (D-pad and OK included) or app launch suppresses it for 6 to 10 s; keypad and other buttons fire only on clean taps (a swipe that starts on a button no longer presses it); pages slide with your finger; mute icon no longer clipped.
 - **v1.2**: keyboard no longer jumps in after Home, Back, volume or an app launch; Menu button removed, Back, Home and Mute bigger, "Mute" caption gone; Xstream tile tries `com.airtel.tv` then `tv.airtel.xstream.tvapp`; every tile ends with a Play Store fallback.
 - **v1.1**: opens on the Remote tab, swipe to keypad works anywhere, keypad digits clear after 2.5 s, bigger VOL/CH pills, deep-link-first app launching, visible launch and rejection messages.
 - **v1.0**: first build.

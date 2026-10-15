@@ -37,6 +37,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
     private FrameLayout holder;
     private LinearLayout tabBar;
     private View setupView, remoteView, appsView, kbView;
+    private boolean wasConnected;
     private int tab = 0; // 0 remote, 1 apps, 2 keyboard
     private boolean resumed;
 
@@ -109,6 +110,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        imeToken++; tab = 0; // always come back to the Remote tab
         session.resume();
         if (session.state != TvSession.State.CONNECTED) startScan();
         refresh();
@@ -129,7 +131,8 @@ public class MainActivity extends Activity implements TvSession.Listener {
     // ---------------------------------------------------------------- state
 
     @Override public void onStateChanged() {
-        if (session.state == TvSession.State.CONNECTED) discovery.stop();
+        if (session.state == TvSession.State.CONNECTED) { discovery.stop(); if (!wasConnected) { tab = 0; imeToken++; } }
+        wasConnected = session.state == TvSession.State.CONNECTED;
         refresh();
     }
 
@@ -139,15 +142,21 @@ public class MainActivity extends Activity implements TvSession.Listener {
         Toast.makeText(this, "The TV rejected the last command" + (lastLaunch.isEmpty() ? "" : " (" + lastLaunch + "). Tap the tile again to try another way."), Toast.LENGTH_LONG).show();
     }
 
-    @Override public void onImeFocus(String pkg) {
+    private int imeToken;
+    @Override public void onImeFocus(final String pkg) {
         updateKeyboardBanner();
-        if (session.prefs().getBoolean("autoopen", true) && resumed && session.imeAutoOpenAllowed(pkg)) {
+        if (!session.prefs().getBoolean("autoopen", true) || !resumed || !session.imeAutoOpenAllowed(pkg)) return;
+        // Ambiguous focus events (the TV fires them on its own) must not move the user: only open if no command
+        // was sent for 1.2 s after the event and the app is still in front and still allowed.
+        final int seq = session.cmdSeq, tok = ++imeToken;
+        main.postDelayed(new Runnable() { public void run() {
+            if (tok != imeToken || !resumed || seq != session.cmdSeq || !session.imeAutoOpenAllowed(pkg)) return;
             kbGuard = true; kbField.setText(""); kbGuard = false; kbPrev = "";
             tab = 2;
             refresh();
             kbField.requestFocus();
             main.postDelayed(new Runnable() { public void run() { showKeyboard(); } }, 250);
-        }
+        } }, 1200);
     }
 
     private void showKeyboard() {
@@ -530,6 +539,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
 
         swipe = new Ui.SwipeFrame(this);
         swipe.cb = new Ui.SwipeFrame.Callback() { public void swiped(boolean next) { if (!touchMode) { keypadShown = next; layoutPages(); } } };
+        swipe.pageTwo = keypadShown;
         FrameLayout padHolder = new FrameLayout(this);
         Ui.DPadView dpad = new Ui.DPadView(this, new Ui.DPadView.Callback() { public void key(int k) { session.key(k); } });
         FrameLayout.LayoutParams dl = new FrameLayout.LayoutParams(dp(260), dp(260), Gravity.CENTER);
@@ -542,6 +552,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(-1, -1);
         tl.topMargin = dp(8); tl.bottomMargin = dp(8);
         swipe.addView(touchPad, tl);
+        swipe.left = padPage; swipe.right = keypadPage;
         c.addView(swipe, new LinearLayout.LayoutParams(-1, 0, 1));
 
         hint = Ui.text(this, "", 12, Ui.MU, false);
@@ -692,9 +703,9 @@ public class MainActivity extends Activity implements TvSession.Listener {
     private void layoutPages() {
         boolean showTouch = touchMode;
         touchPad.setVisibility(showTouch ? View.VISIBLE : View.GONE);
-        padPage.setVisibility(!showTouch && !keypadShown ? View.VISIBLE : View.GONE);
-        keypadPage.setVisibility(!showTouch && keypadShown ? View.VISIBLE : View.GONE);
         swipe.enabled = !showTouch;
+        if (showTouch) { padPage.setVisibility(View.GONE); keypadPage.setVisibility(View.GONE); }
+        else swipe.settle(keypadShown, swipe.getWidth() > 0 && swipe.pageTwo != keypadShown);
         btn123.setAlpha(showTouch ? 0.35f : 1f);
         btn123.setText(keypadShown ? "D-pad" : "123");
         hint.setText(showTouch ? "Touch mode: swipe on the pad to move" : "Tap 123 or swipe the page for the keypad");

@@ -66,21 +66,33 @@ public final class Ui {
     public static void button(final View v, final Runnable action, final boolean repeat) {
         final Handler h = new Handler(Looper.getMainLooper());
         final Runnable[] rep = new Runnable[1];
-        rep[0] = new Runnable() { public void run() { action.run(); h.postDelayed(rep[0], 130); } };
+        final boolean[] st = new boolean[3]; // 0 fired, 1 cancelled by movement, 2 down
+        final float[] xy = new float[2];
+        final Runnable first = new Runnable() { public void run() {
+            if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(v); action.run(); if (repeat) h.postDelayed(rep[0], 360); }
+        } };
+        rep[0] = new Runnable() { public void run() { if (!st[2] || st[1]) return; action.run(); h.postDelayed(rep[0], 130); } };
         v.setClickable(true);
         v.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View view, MotionEvent e) {
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
+                        st[0] = false; st[1] = false; st[2] = true; xy[0] = e.getRawX(); xy[1] = e.getRawY();
                         view.setPressed(true);
-                        haptic(view);
-                        action.run();
-                        if (repeat) h.postDelayed(rep[0], 450);
+                        h.postDelayed(first, 90); // brief wait so a swipe that starts on a button never fires it
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        if (!st[1] && (Math.abs(e.getRawX() - xy[0]) > dp(view.getContext(), 10) || Math.abs(e.getRawY() - xy[1]) > dp(view.getContext(), 10))) {
+                            st[1] = true; view.setPressed(false); h.removeCallbacks(first); h.removeCallbacks(rep[0]);
+                        }
                         return true;
                     case MotionEvent.ACTION_UP:
+                        h.removeCallbacks(first);
+                        if (!st[0] && !st[1]) first.run();
+                        st[2] = false; view.setPressed(false); h.removeCallbacks(rep[0]);
+                        return true;
                     case MotionEvent.ACTION_CANCEL:
-                        view.setPressed(false);
-                        h.removeCallbacks(rep[0]);
+                        st[1] = true; st[2] = false; h.removeCallbacks(first); h.removeCallbacks(rep[0]); view.setPressed(false);
                         return true;
                 }
                 return true;
@@ -127,6 +139,7 @@ public final class Ui {
                     c.drawArc(new RectF(cx - 8 * u, cy - 7 * u, cx + 8 * u, cy + 9 * u), -60, 300, false, p);
                     c.drawLine(cx, cy - 10 * u, cx, cy - 1 * u, p); break;
                 case I_MUTE: case I_UNMUTE:
+                    c.save(); c.scale(0.8f, 0.8f, cx, cy); c.translate(-1.5f * u, 0); // keep the waves fully inside the view
                     p.setStyle(Paint.Style.FILL);
                     q.moveTo(cx - 10 * u, cy - 3 * u); q.lineTo(cx - 5 * u, cy - 3 * u); q.lineTo(cx + 1 * u, cy - 8 * u); q.lineTo(cx + 1 * u, cy + 8 * u);
                     q.lineTo(cx - 5 * u, cy + 3 * u); q.lineTo(cx - 10 * u, cy + 3 * u); q.close();
@@ -139,6 +152,7 @@ public final class Ui {
                         c.drawArc(new RectF(cx - 2 * u, cy - 5 * u, cx + 8 * u, cy + 5 * u), -50, 100, false, p);
                         c.drawArc(new RectF(cx - 4 * u, cy - 9 * u, cx + 12 * u, cy + 9 * u), -50, 100, false, p);
                     }
+                    c.restore();
                     break;
                 case I_REMOTE:
                     c.drawRoundRect(new RectF(cx - 5 * u, cy - 10 * u, cx + 5 * u, cy + 10 * u), 3 * u, 3 * u, p);
@@ -312,37 +326,89 @@ public final class Ui {
     }
 
     /** Container that turns a horizontal swipe into a page change, leaving taps for children. */
+    /** Two pages that follow the finger and slide into place, like a pager. */
     public static final class SwipeFrame extends FrameLayout {
         public interface Callback { void swiped(boolean toNext); }
         public Callback cb;
         public boolean enabled = true;
+        public View left, right;      // page one (D-pad) and page two (keypad)
+        public boolean pageTwo;
         private float x0, y0;
-        private boolean fired;
+        private boolean drag;
+        private int gen;
         public SwipeFrame(Context c) { super(c); }
+
+        private int w() { return Math.max(getWidth(), 1); }
+
+        private void applyDrag(float dx) {
+            int W = w();
+            dx = pageTwo ? Math.max(0, Math.min(W, dx)) : Math.max(-W, Math.min(0, dx));
+            if (left == null || right == null) return;
+            left.setTranslationX(pageTwo ? dx - W : dx);
+            right.setTranslationX(pageTwo ? dx : dx + W);
+        }
+
+        /** Show page one or two. Animated unless animate is false. */
+        public void settle(final boolean two, boolean animate) {
+            if (left == null || right == null) return;
+            pageTwo = two;
+            final int myGen = ++gen;
+            int W = w();
+            float lt = two ? -W : 0, rt = two ? 0 : W;
+            left.setVisibility(VISIBLE); right.setVisibility(VISIBLE);
+            if (!animate) {
+                left.animate().cancel(); right.animate().cancel();
+                left.setTranslationX(lt); right.setTranslationX(rt);
+                (two ? left : right).setVisibility(GONE);
+                return;
+            }
+            left.animate().translationX(lt).setDuration(220).start();
+            right.animate().translationX(rt).setDuration(220).withEndAction(new Runnable() { public void run() {
+                if (myGen == gen) (two ? left : right).setVisibility(GONE);
+            } }).start();
+        }
 
         private boolean track(MotionEvent e) {
             switch (e.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN: x0 = e.getX(); y0 = e.getY(); fired = false; return false;
-                case MotionEvent.ACTION_MOVE:
+                case MotionEvent.ACTION_DOWN: x0 = e.getX(); y0 = e.getY(); drag = false; return false;
+                case MotionEvent.ACTION_MOVE: {
                     float dx = e.getX() - x0, dy = e.getY() - y0;
-                    if (!fired && Math.abs(dx) > dp(getContext(), 40) && Math.abs(dx) > 1.5f * Math.abs(dy)) {
-                        fired = true;
-                        if (cb != null) cb.swiped(dx < 0);
-                        return true;
+                    if (!drag && Math.abs(dx) > dp(getContext(), 16) && Math.abs(dx) > 1.5f * Math.abs(dy)) {
+                        drag = true; gen++;
+                        left.animate().cancel(); right.animate().cancel();
+                        left.setVisibility(VISIBLE); right.setVisibility(VISIBLE);
                     }
-                    return fired;
+                    if (drag) applyDrag(dx);
+                    return drag;
+                }
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL: {
+                    if (!drag) return false;
+                    drag = false;
+                    float dx = e.getX() - x0;
+                    boolean toward = pageTwo ? dx > 0 : dx < 0;
+                    boolean commit = e.getActionMasked() == MotionEvent.ACTION_UP && toward && Math.abs(dx) > Math.min(w() * 0.25f, dp(getContext(), 60));
+                    if (commit) { if (cb != null) cb.swiped(!pageTwo); else settle(!pageTwo, true); }
+                    else settle(pageTwo, true);
+                    return true;
+                }
             }
-            return fired;
+            return drag;
+        }
+
+        @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
+            super.onSizeChanged(w, h, ow, oh);
+            if (!drag && enabled && left != null) settle(pageTwo, false);
         }
 
         @Override public boolean onInterceptTouchEvent(MotionEvent e) {
-            if (!enabled) return false;
+            if (!enabled || left == null) return false;
             return track(e);
         }
 
         /** Also sees touches no child wanted (the empty area around the D-pad), so swipes work anywhere on the page. */
         @Override public boolean onTouchEvent(MotionEvent e) {
-            if (!enabled) return false;
+            if (!enabled || left == null) return false;
             track(e);
             return true;
         }

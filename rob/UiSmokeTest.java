@@ -45,11 +45,11 @@ public class UiSmokeTest {
     }
     static void pump(long ms) {
         long end = System.currentTimeMillis() + ms;
-        while (System.currentTimeMillis() < end) { ShadowLooper.idleMainLooper(); try { Thread.sleep(40); } catch (Exception e) {} }
+        while (System.currentTimeMillis() < end) { ShadowLooper.idleMainLooper(40, java.util.concurrent.TimeUnit.MILLISECONDS); try { Thread.sleep(40); } catch (Exception e) {} }
     }
     static boolean waitFor(Activity a, String s, long ms) {
         long end = System.currentTimeMillis() + ms;
-        while (System.currentTimeMillis() < end) { ShadowLooper.idleMainLooper(); if (has(a, s)) return true; try { Thread.sleep(50); } catch (Exception e) {} }
+        while (System.currentTimeMillis() < end) { ShadowLooper.idleMainLooper(50, java.util.concurrent.TimeUnit.MILLISECONDS); if (has(a, s)) return true; try { Thread.sleep(50); } catch (Exception e) {} }
         return false;
     }
     static List<String> log() throws Exception { return Files.readAllLines(Paths.get(DIR, "tv_log.jsonl")); }
@@ -115,13 +115,31 @@ public class UiSmokeTest {
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 20, MotionEvent.ACTION_MOVE, 450, 105, 0));
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 40, MotionEvent.ACTION_MOVE, 200, 110, 0));
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 60, MotionEvent.ACTION_UP, 200, 110, 0));
+        pump(400);
         check("swipe left (even on empty area) opens keypad page", has(a, "OK") && has(a, "D-pad"));
         ts = SystemClock.uptimeMillis();
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts, MotionEvent.ACTION_DOWN, 200, 100, 0));
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 20, MotionEvent.ACTION_MOVE, 300, 100, 0));
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 40, MotionEvent.ACTION_MOVE, 600, 100, 0));
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 60, MotionEvent.ACTION_UP, 600, 100, 0));
+        pump(400);
         check("swipe right returns to d-pad page", has(a, "123") && !has(a, "OK"));
+        // a swipe that starts on a keypad button must not press it
+        click(text(a, "123"));
+        View b7 = text(a, "7");
+        long tm = SystemClock.uptimeMillis();
+        b7.dispatchTouchEvent(MotionEvent.obtain(tm, tm, MotionEvent.ACTION_DOWN, 5, 5, 0));
+        b7.dispatchTouchEvent(MotionEvent.obtain(tm, tm + 30, MotionEvent.ACTION_MOVE, 160, 8, 0));
+        pump(300);
+        b7.dispatchTouchEvent(MotionEvent.obtain(tm, tm + 340, MotionEvent.ACTION_UP, 160, 8, 0));
+        tm = SystemClock.uptimeMillis();
+        b7.dispatchTouchEvent(MotionEvent.obtain(tm, tm, MotionEvent.ACTION_DOWN, 5, 5, 0));
+        b7.dispatchTouchEvent(MotionEvent.obtain(tm, tm + 30, MotionEvent.ACTION_CANCEL, 5, 5, 0));
+        pump(300);
+        check("swipe starting on a keypad button does not press it (moved or cancelled)", !logHas("\"code\": 14,"));
+        touch(b7, 5, 5); pump(300);
+        check("a clean tap on the same button still presses it", logHas("\"code\": 14,"));
+        click(text(a, "D-pad"));
         // power and bottom block
         View power = null;
         for (View v : all(a)) if (v instanceof android.widget.FrameLayout && v.getClass() == android.widget.FrameLayout.class && v.isClickable() && v.getWidth() == 0) { }
