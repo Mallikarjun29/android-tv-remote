@@ -65,13 +65,19 @@ public final class Ui {
     /** Makes a view act as a button: pressed state, haptic tick, and optional press-and-hold repeat. */
     /** Fires on release, and only if the finger did not travel (a swipe over the button never presses it).
      *  With repeat, holding still for 0.35 s fires once and then repeats until release. */
-    public static void button(final View v, final Runnable action, final boolean repeat) {
+    public static void button(final View v, final Runnable action, final boolean repeat) { button(v, action, repeat, null); }
+
+    /** Same, plus an optional long-press action (fires after 0.5 s held still, instead of the tap). */
+    public static void button(final View v, final Runnable action, final boolean repeat, final Runnable longAction) {
         final Handler h = new Handler(Looper.getMainLooper());
         final Runnable[] rep = new Runnable[1];
         final boolean[] st = new boolean[3]; // 0 fired, 1 cancelled, 2 down
         final float[] xy = new float[2];
         final Runnable holdStart = new Runnable() { public void run() {
             if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(v); action.run(); h.postDelayed(rep[0], 130); }
+        } };
+        final Runnable longFire = new Runnable() { public void run() {
+            if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(v); v.setPressed(false); longAction.run(); }
         } };
         rep[0] = new Runnable() { public void run() { if (!st[2] || st[1]) return; action.run(); h.postDelayed(rep[0], 130); } };
         v.setClickable(true);
@@ -82,19 +88,20 @@ public final class Ui {
                         st[0] = false; st[1] = false; st[2] = true; xy[0] = e.getRawX(); xy[1] = e.getRawY();
                         view.setPressed(true);
                         if (repeat) h.postDelayed(holdStart, 350);
+                        if (longAction != null) h.postDelayed(longFire, 500);
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         if (!st[1] && (Math.abs(e.getRawX() - xy[0]) > dp(view.getContext(), 6) || Math.abs(e.getRawY() - xy[1]) > dp(view.getContext(), 6))) {
-                            st[1] = true; view.setPressed(false); h.removeCallbacks(holdStart); h.removeCallbacks(rep[0]);
+                            st[1] = true; view.setPressed(false); h.removeCallbacks(holdStart); h.removeCallbacks(longFire); h.removeCallbacks(rep[0]);
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
-                        h.removeCallbacks(holdStart); h.removeCallbacks(rep[0]);
+                        h.removeCallbacks(holdStart); h.removeCallbacks(longFire); h.removeCallbacks(rep[0]);
                         if (st[2] && !st[0] && !st[1]) { st[0] = true; haptic(view); action.run(); }
                         st[2] = false; view.setPressed(false);
                         return true;
                     case MotionEvent.ACTION_CANCEL:
-                        st[1] = true; st[2] = false; h.removeCallbacks(holdStart); h.removeCallbacks(rep[0]); view.setPressed(false);
+                        st[1] = true; st[2] = false; h.removeCallbacks(holdStart); h.removeCallbacks(longFire); h.removeCallbacks(rep[0]); view.setPressed(false);
                         return true;
                 }
                 return true;
@@ -349,6 +356,8 @@ public final class Ui {
         public boolean enabled = true;
         public View left, right;      // page one (D-pad) and page two (keypad)
         public boolean pageTwo;
+        public View noSwipe;          // a horizontally scrolling strip that keeps its own gestures
+        private boolean skip;
         private float x0, y0;
         private boolean drag;
         private int gen;
@@ -384,10 +393,18 @@ public final class Ui {
             } }).start();
         }
 
+        private boolean inNoSwipe(MotionEvent e) {
+            if (noSwipe == null || noSwipe.getVisibility() != VISIBLE || !(noSwipe.canScrollHorizontally(1) || noSwipe.canScrollHorizontally(-1))) return false;
+            int[] loc = new int[2]; noSwipe.getLocationOnScreen(loc);
+            float rx = e.getRawX(), ry = e.getRawY();
+            return rx >= loc[0] && rx <= loc[0] + noSwipe.getWidth() && ry >= loc[1] && ry <= loc[1] + noSwipe.getHeight();
+        }
+
         private boolean track(MotionEvent e) {
             switch (e.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN: x0 = e.getX(); y0 = e.getY(); drag = false; return false;
+                case MotionEvent.ACTION_DOWN: x0 = e.getX(); y0 = e.getY(); drag = false; skip = inNoSwipe(e); return false;
                 case MotionEvent.ACTION_MOVE: {
+                    if (skip) return false;
                     float dx = e.getX() - x0, dy = e.getY() - y0;
                     if (!drag && Math.abs(dx) > dp(getContext(), 16) && Math.abs(dx) > 1.5f * Math.abs(dy)) {
                         drag = true; gen++;

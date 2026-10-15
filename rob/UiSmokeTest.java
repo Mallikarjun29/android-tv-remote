@@ -147,6 +147,42 @@ public class UiSmokeTest {
         check("swipe starting on a keypad button does not press it (moved or cancelled)", !logHas("\"code\": 14,"));
         touch(b7, 5, 5); pump(300);
         check("a clean tap on the same button still presses it", logHas("\"code\": 14,"));
+        // favourite channels
+        check("empty favourites state is shown", has(a, "Favourite channels") && has(a, "+  Add your first favourite\nType a number below, then hold here to save it"));
+        View emptyChip = text(a, "+  Add your first favourite\nType a number below, then hold here to save it");
+        check("empty chip found", emptyChip != null);
+        pump(3000);  // let the earlier echo clear
+        touch(text(a, "1"), 5, 5); touch(text(a, "0"), 5, 5); touch(text(a, "5"), 5, 5);  // typed 105
+        long favT1 = SystemClock.uptimeMillis();
+        emptyChip.dispatchTouchEvent(MotionEvent.obtain(favT1, favT1, MotionEvent.ACTION_DOWN, 5, 5, 0));
+        pump(700);
+        emptyChip.dispatchTouchEvent(MotionEvent.obtain(favT1, favT1 + 720, MotionEvent.ACTION_UP, 5, 5, 0));
+        AlertDialog favDlg = ShadowAlertDialog.getLatestAlertDialog();
+        check("holding the empty chip opens Save favourite", favDlg != null && favDlg.isShowing());
+        List<View> favViews = new ArrayList<View>(); collect(favDlg.getWindow().getDecorView(), favViews);
+        List<EditText> favFields = new ArrayList<EditText>();
+        for (View v : favViews) if (v instanceof EditText) favFields.add((EditText) v);
+        check("number prefilled from what was typed", favFields.size() == 2 && favFields.get(1).getText().toString().equals("105"));
+        favFields.get(0).setText("Sony Max"); favFields.get(1).setText("101");
+        favDlg.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        pump(300);
+        check("favourite chip appears with name and number", has(a, "Sony Max") && has(a, "101"));
+        int favBefore = log().size();
+        touch(text(a, "Sony Max") != null ? (View) text(a, "Sony Max").getParent() : null, 5, 5);
+        pump(400);
+        List<String> favLines = log().subList(favBefore, log().size());
+        String favJoined = String.join("", favLines);
+        check("tapping the chip sends 1,0,1 then OK (8,7,8,23)", favJoined.indexOf("\"code\": 8,") >= 0 && favJoined.indexOf("\"code\": 7,") >= 0 && favJoined.indexOf("\"code\": 23,") > favJoined.indexOf("\"code\": 8,"));
+        View chipV = (View) text(a, "Sony Max").getParent();
+        long favT2 = SystemClock.uptimeMillis();
+        chipV.dispatchTouchEvent(MotionEvent.obtain(favT2, favT2, MotionEvent.ACTION_DOWN, 5, 5, 0));
+        pump(700);
+        chipV.dispatchTouchEvent(MotionEvent.obtain(favT2, favT2 + 720, MotionEvent.ACTION_UP, 5, 5, 0));
+        AlertDialog favEdit = ShadowAlertDialog.getLatestAlertDialog();
+        check("holding a chip opens Edit favourite with Delete", favEdit != null && favEdit.isShowing() && favEdit.getButton(AlertDialog.BUTTON_NEUTRAL) != null);
+        favEdit.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();
+        pump(300);
+        check("delete removes it, empty state returns", !has(a, "Sony Max") && has(a, "+  Add your first favourite\nType a number below, then hold here to save it"));
         click(text(a, "D-pad"));
         // power and bottom block
         View power = null;

@@ -44,6 +44,11 @@ public class UnitTests {
         eq("xstream tries both package names then store page", Arrays.toString(BuiltinApps.candidates(0, null)), "[market://launch?id=com.airtel.tv, market://launch?id=tv.airtel.xstream.tvapp, market://details?id=com.airtel.tv]");
         eq("edited package overrides all", Arrays.toString(BuiltinApps.candidates(3, "com.x.y")), "[market://launch?id=com.x.y, market://details?id=com.x.y]");
         eq("hotstar has package fallbacks", BuiltinApps.candidates(2, null).length, 4);
+        eq("fav roundtrip", FavStore.serialize(FavStore.parse("Star Plus\t101\nZee TV\t102\n")), "Star Plus\t101\nZee TV\t102\n");
+        eq("fav parse drops bad rows", FavStore.parse("\t101\nColors\tabc\nSony\t104\nbroken\n").size(), 1);
+        eq("fav name cleaned and capped", FavStore.cleanName("  A very long channel name indeed\t"), "A very long chan");
+        eq("fav number validation", FavStore.validNumber("101") + "," + FavStore.validNumber("") + "," + FavStore.validNumber("12a") + "," + FavStore.validNumber("123456"), "true,false,false,false");
+        eq("fav tap sends digits then OK", Arrays.toString(FavStore.keySequence("101")), "[8, 7, 8, 23]");
         eq("digit keys", Keys.digit(0) + "," + Keys.digit(9), "7,16");
         System.out.println(fails == 0 ? "ALL PASS" : "FAILURES " + fails);
         System.exit(fails == 0 ? 0 : 1);

@@ -552,7 +552,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(-1, -1);
         tl.topMargin = dp(8); tl.bottomMargin = dp(8);
         swipe.addView(touchPad, tl);
-        swipe.left = padPage; swipe.right = keypadPage;
+        swipe.left = padPage; swipe.right = keypadPage; swipe.noSwipe = favScroll;
         c.addView(swipe, new LinearLayout.LayoutParams(-1, 0, 1));
 
         hint = Ui.text(this, "", 12, Ui.MU, false);
@@ -658,6 +658,16 @@ public class MainActivity extends Activity implements TvSession.Listener {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(dp(8), dp(4), dp(8), dp(4));
+        TextView favLabel = Ui.text(this, "Favourite channels", 12, Ui.MU, true);
+        favLabel.setPadding(dp(6), 0, 0, dp(2));
+        c.addView(favLabel, new LinearLayout.LayoutParams(-1, -2));
+        favScroll = new android.widget.HorizontalScrollView(this);
+        favScroll.setHorizontalScrollBarEnabled(false);
+        favRow = new LinearLayout(this);
+        favRow.setGravity(Gravity.CENTER_VERTICAL);
+        favScroll.addView(favRow, new FrameLayout.LayoutParams(-2, -1));
+        c.addView(favScroll, new LinearLayout.LayoutParams(-1, dp(52)));
+        rebuildFavs();
         echo = Ui.text(this, " ", 26, Ui.TX, true);
         echo.setGravity(Gravity.CENTER);
         c.addView(echo, new LinearLayout.LayoutParams(-1, dp(36)));
@@ -958,6 +968,110 @@ public class MainActivity extends Activity implements TvSession.Listener {
             l.add(new AppStore.Entry(n, v2, addIsLink));
             session.prefs().edit().putString("custom", AppStore.serialize(l)).apply();
             rebuildApps();
+            dlg.dismiss();
+        } });
+    }
+
+    // ---------------------------------------------------------------- favourite channels
+
+    private android.widget.HorizontalScrollView favScroll;
+    private LinearLayout favRow;
+
+    private List<FavStore.Fav> favs() { return FavStore.parse(session.prefs().getString("favs", "")); }
+    private void saveFavs(List<FavStore.Fav> l) { session.prefs().edit().putString("favs", FavStore.serialize(l)).apply(); rebuildFavs(); }
+
+    private void rebuildFavs() {
+        if (favRow == null) return;
+        favRow.removeAllViews();
+        final List<FavStore.Fav> l = favs();
+        if (l.isEmpty()) {
+            TextView t = Ui.text(this, "+  Add your first favourite\nType a number below, then hold here to save it", 12, Ui.ACC, true);
+            t.setGravity(Gravity.CENTER_VERTICAL);
+            t.setPadding(dp(14), 0, dp(14), 0);
+            t.setBackground(Ui.outlined(Ui.BG, Ui.ACC, dp(1), dp(18)));
+            Runnable add = new Runnable() { public void run() { showFavDialog(-1); } };
+            Ui.button(t, add, false, add);
+            favRow.addView(t, new LinearLayout.LayoutParams(-1, dp(46)));
+            return;
+        }
+        for (int i = 0; i < l.size(); i++) {
+            final int idx = i;
+            final FavStore.Fav f = l.get(i);
+            LinearLayout chip = new LinearLayout(this);
+            chip.setOrientation(LinearLayout.VERTICAL);
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(14), 0, dp(14), 0);
+            chip.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(18)));
+            TextView n = Ui.text(this, f.name, 13, Ui.TX, true); n.setGravity(Gravity.CENTER); n.setSingleLine(true);
+            TextView num = Ui.text(this, f.number, 11, Ui.MU, false); num.setGravity(Gravity.CENTER);
+            chip.addView(n); chip.addView(num);
+            Ui.button(chip, new Runnable() { public void run() { sendChannel(f.number); } },
+                    false, new Runnable() { public void run() { showFavDialog(idx); } });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(46));
+            lp.rightMargin = dp(8);
+            favRow.addView(chip, lp);
+        }
+        if (l.size() < FavStore.MAX_FAVS) {
+            FrameLayout plus = new FrameLayout(this);
+            plus.setBackground(Ui.outlined(Ui.BG, Ui.ACC, dp(1), dp(18)));
+            plus.addView(new Ui.IconView(this, Ui.I_PLUS, Ui.ACC), new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
+            Runnable add = new Runnable() { public void run() { showFavDialog(-1); } };
+            Ui.button(plus, add, false);
+            favRow.addView(plus, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        }
+    }
+
+    /** Taps a favourite: its digits, then OK. */
+    private void sendChannel(String number) {
+        for (int k : FavStore.keySequence(number)) session.key(k);
+        echoText.setLength(0);
+        echoText.append(number);
+        echo.setText(number);
+        main.removeCallbacks(clearEcho);
+        main.postDelayed(clearEcho, 2500);
+    }
+
+    /** index -1 adds a new favourite (number prefilled from what was typed); otherwise edits it. */
+    private void showFavDialog(final int index) {
+        final List<FavStore.Fav> l = favs();
+        final boolean edit = index >= 0 && index < l.size();
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        final EditText name = field("Name, e.g. Star Plus");
+        name.setBackground(Ui.outlined(Ui.BG, 0xFF3A4260, dp(1), dp(14)));
+        final EditText num = field("Channel number, e.g. 101");
+        num.setBackground(Ui.outlined(Ui.BG, 0xFF3A4260, dp(1), dp(14)));
+        num.setInputType(InputType.TYPE_CLASS_NUMBER);
+        if (edit) { name.setText(l.get(index).name); num.setText(l.get(index).number); }
+        else if (echoText.length() > 0) num.setText(echoText.toString());
+        LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(-1, dp(48));
+        nl.topMargin = dp(8);
+        box.addView(name, nl);
+        LinearLayout.LayoutParams vl = new LinearLayout.LayoutParams(-1, dp(48));
+        vl.topMargin = dp(10);
+        box.addView(num, vl);
+        TextView help = Ui.text(this, "Tapping the chip sends these digits, then OK.", 12, Ui.MU, false);
+        help.setPadding(0, dp(8), 0, 0);
+        box.addView(help);
+        AlertDialog.Builder b = new AlertDialog.Builder(this).setTitle(edit ? "Edit favourite" : "Save favourite").setView(box)
+                .setPositiveButton("Save", null).setNegativeButton("Cancel", null);
+        if (edit) b.setNeutralButton("Delete", new DialogInterface.OnClickListener() { public void onClick(DialogInterface d, int w) {
+            List<FavStore.Fav> l2 = favs();
+            if (index < l2.size()) l2.remove(index);
+            saveFavs(l2);
+        } });
+        final AlertDialog dlg = b.create();
+        dlg.show();
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            String n = FavStore.cleanName(name.getText().toString());
+            String d = num.getText().toString().trim();
+            if (n.isEmpty()) { Toast.makeText(MainActivity.this, "Give it a name", Toast.LENGTH_SHORT).show(); return; }
+            if (!FavStore.validNumber(d)) { Toast.makeText(MainActivity.this, "Enter the channel number (digits only)", Toast.LENGTH_SHORT).show(); return; }
+            List<FavStore.Fav> l2 = favs();
+            FavStore.Fav f = new FavStore.Fav(n, d);
+            if (edit && index < l2.size()) l2.set(index, f); else l2.add(f);
+            saveFavs(l2);
             dlg.dismiss();
         } });
     }

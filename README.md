@@ -11,6 +11,7 @@ No human wrote a line of this. Built with **[Instinct](https://instinct.com)**, 
 - **Remote, touch and keypad.** D-pad, a touchpad mode, and a number pad one swipe away
 - **Big VOL and CH pills** with a live volume readout, hold to repeat
 - **Apps grid** with real logos: Airtel Xstream, ZEE5, JioHotstar, Netflix, Prime Video, Apple TV+, YouTube. Add your own apps or any link
+- **Favourite channels.** Save your channels as chips on the keypad page, tap to jump
 - **Type on your phone.** The keyboard opens when you tap a text field on the TV, and stays out of the way otherwise
 - **Honest errors.** If the TV rejects a launch, you see exactly what was sent
 
@@ -42,6 +43,7 @@ Brand logos are from Wikimedia Commons. Trademarks belong to their owners.
 | ![No TV](mocks/v10-7-no-tv-found.png) | ![Custom app](mocks/v11-8-custom-app-tab.png) | ![Custom link](mocks/v11-9-custom-link-tab.png) |
 
 ## Release notes
+- **v1.5**: favourite channels on the keypad page: a chip row above the digits, hold to save a name and channel number (prefilled from what you typed), tap a chip to send its digits then OK, hold a chip to edit or delete.
 - **v1.4**: buttons and the D-pad send on release only, and only if the finger did not travel, so sliding across them never presses anything (hold still to repeat); new Last channel button next to Mute (sends KEYCODE_LAST_CHANNEL, 229).
 - **v1.3**: always opens on the Remote tab; keyboard auto-open now needs a text field to stay focused for 1.2 s with no commands sent, and any key (D-pad and OK included) or app launch suppresses it for 6 to 10 s; keypad and other buttons fire only on clean taps (a swipe that starts on a button no longer presses it); pages slide with your finger; mute icon no longer clipped.
 - **v1.2**: keyboard no longer jumps in after Home, Back, volume or an app launch; Menu button removed, Back, Home and Mute bigger, "Mute" caption gone; Xstream tile tries `com.airtel.tv` then `tv.airtel.xstream.tvapp`; every tile ends with a Play Store fallback.
