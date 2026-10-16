@@ -63,6 +63,19 @@ public final class TvSession {
     public boolean hasSavedTv() { return host != null; }
 
     /** The name this install pairs under. Installs from before v1.7 have no saved name: they keep the old shared one so their pairing stays valid. */
+    public static final String TV_CHANGED = "This TV's identity changed. If you reset or updated the TV, tap Connect to pair again. If you didn't, you may be on a Wi-Fi network you don't trust.";
+    private volatile boolean tvChanged;   // the last attempt hit a different certificate than the one we remember
+    private volatile boolean repairNext;  // the user saw that warning and tapped Connect: go straight to pairing
+
+    private static String hex(byte[] b) { StringBuilder s = new StringBuilder(); for (byte x : b) s.append(String.format("%02x", x)); return s.toString(); }
+    private static byte[] unhex(String h) { byte[] b = new byte[h.length() / 2]; for (int i = 0; i < b.length; i++) b[i] = (byte) Integer.parseInt(h.substring(2 * i, 2 * i + 2), 16); return b; }
+    /** The certificate fingerprint remembered for this TV, or null if we haven't pinned it yet. */
+    private byte[] pinFor(String ip) {
+        String h = prefs.getString("tv_pin", null);
+        if (h == null || !ip.equals(prefs.getString("tv_pin_host", null)) || h.length() != 64) return null;
+        try { return unhex(h); } catch (Exception e) { return null; }
+    }
+
     private String clientName() { return prefs.getString("client_name", ClientName.LEGACY); }
 
     private Identity identity() throws Exception {
@@ -119,11 +132,12 @@ public final class TvSession {
                 // A TV we already connected to is paired with us. After the app is swiped away the TV can be slow
                 // to take a new session (still waking, or holding the old one), so retry before concluding it forgot us.
                 // Only then fall back to a fresh pairing code. A TV never seen before gets one quick try.
-                boolean known = ip.equals(prefs.getString("host", null));
-                int tries = known ? 4 : 1;
+                boolean known = ip.equals(prefs.getString("host", null)) && !repairNext;
+                int tries = repairNext ? 0 : (known ? 4 : 1);
                 for (int n = 0; n < tries; n++) {
                     if (tryRemote(i, ip, g, known ? 4000 + 1500 * n : 3000)) return;
                     if (g != gen) return;
+                    if (tvChanged) { set(State.IDLE, TV_CHANGED); repairNext = true; return; }
                     if (n + 1 < tries) { try { Thread.sleep(1500); } catch (InterruptedException ignored) {} }
                     if (g != gen) return;
                 }
@@ -134,6 +148,7 @@ public final class TvSession {
                 p.start(clientName());
                 if (g != gen) { p.close(); return; }
                 pairing = p;
+                repairNext = false;
                 set(State.NEED_CODE, null);
             } catch (Exception e) {
                 if (g == gen) set(State.IDLE, "Couldn't reach the TV at " + ip + ". Check it is on, and on the same Wi-Fi as this phone.");
@@ -151,6 +166,7 @@ public final class TvSession {
             try {
                 p.finish(code);
                 p.close(); pairing = null;
+                prefs.edit().remove("tv_pin").remove("tv_pin_host").commit(); // a new pairing is a new trust decision
                 Identity i = identity();
                 for (int n = 0; n < 4 && g == gen; n++) {
                     if (tryRemote(i, host, g, 4000)) return;
@@ -188,13 +204,18 @@ public final class TvSession {
             }
             public void onClosed(Exception e) { lost(g); }
         });
+        tvChanged = false;
+        rc.setPin(pinFor(ip));
         try {
             rc.connect(ip, 6466, timeoutMs);
         } catch (Exception e) {
+            if (Identity.causedByTvChange(e)) tvChanged = true;
             rc.close();
             return false;
         }
         if (g != gen) { rc.close(); return true; }
+        // First successful connection to this TV after pairing: remember its certificate so a different device at this address is refused later.
+        if (pinFor(ip) == null && rc.seenFingerprint() != null) prefs.edit().putString("tv_pin", hex(rc.seenFingerprint())).putString("tv_pin_host", ip).apply();
         remote = rc;
         prefs.edit().putString("host", ip).putString("tvname", tvName == null ? ip : tvName).apply();
         connectedAt = System.currentTimeMillis();
@@ -218,6 +239,7 @@ public final class TvSession {
                 if (tryRemote(identity(), host, g, 4000)) return;
             } catch (Exception ignored) {}
             if (g != gen) return;
+            if (tvChanged) { set(State.IDLE, TV_CHANGED); repairNext = true; return; }
             if (attempt >= 4) { set(State.IDLE, "Lost connection to the TV. Tap Connect to reconnect."); return; }
             try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
             if (g == gen) reconnect(attempt + 1);

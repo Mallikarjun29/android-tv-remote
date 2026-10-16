@@ -20,7 +20,7 @@ An Android TV remote for your phone, designed, coded, tested and shipped through
 - Original code and design in plain Java and Android views. No Gradle, no third-party libraries
 - Our own protocol client: TLS pairing on port 6467, remote on port 6466, protobuf messages by hand
 - Checked against an independent open-source implementation (a mock TV built on `androidtvremote2`), plus unit tests and a Robolectric UI run of the real activity
-- Shipped as signed releases and iterated from real-TV reports: v1.0 to v1.7 in the same sitting
+- Shipped as signed releases and iterated from real-TV reports: v1.0 to v1.8 in the same sitting
 
 Good to know: Xstream and ZEE5 tiles depend on which package names the TV has installed (editable with a long-press on a tile).
 
@@ -36,6 +36,7 @@ These are the design mocks, one per page. The built app differs slightly: no Men
 
 ## Release notes
 - **v1.6**: fixes the app asking for a new pairing code after it is swiped away: a TV you already paired with is retried for about 20 s before a fresh code is ever requested; favourite channels now sit in one bigger strip shared by the D-pad and keypad pages; Android Auto Backup is on for the pairing, favourites, custom apps and settings. Installs over earlier releases keep all saved data (same signing key).
+- **v1.8**: security release. The app now remembers your TV's certificate after the first connection and warns instead of connecting if a different device answers at that address (needs a check on a real TV: if the TV regenerates its certificate you will be asked to pair again). Pairing keys are no longer included in Android backups, and the unneeded cleartext-traffic flag is gone. See SECURITY.md.
 - **v1.7**: fixes a second phone knocking the first one off the TV: every install now pairs under its own name and certificate instead of the shared "TV Remote". Existing pairings keep working; a phone the TV already dropped asks for a new code once and then keeps its own identity.
 - **v1.5**: favourite channels on the keypad page: a chip row above the digits, hold to save a name and channel number (prefilled from what you typed), tap a chip to send its digits then OK, hold a chip to edit or delete.
 - **v1.4**: buttons and the D-pad send on release only, and only if the finger did not travel, so sliding across them never presses anything (hold still to repeat); new Last channel button next to Mute (sends KEYCODE_LAST_CHANNEL, 229).

@@ -38,9 +38,16 @@ public final class RemoteClient implements Closeable {
 
     public RemoteClient(Identity id, Listener l) { this.id = id; this.l = l; }
 
+    private byte[] pin;
+    private final byte[][] seen = new byte[1][];
+    /** Require the TV to present this certificate fingerprint (null = accept the first one we see). */
+    public void setPin(byte[] fp) { pin = fp; }
+    /** The fingerprint the TV presented in the last handshake, or null. */
+    public byte[] seenFingerprint() { return seen[0]; }
+
     /** Connects, completes the handshake and waits (up to timeoutMs) until the TV says the remote is started. */
     public void connect(String host, int port, int timeoutMs) throws Exception {
-        sock = (SSLSocket) id.socketFactory().createSocket();
+        sock = (SSLSocket) id.socketFactory(pin, seen).createSocket();
         sock.connect(new InetSocketAddress(host, port), 5000);
         sock.setSoTimeout(30000); // the TV pings every few seconds; silence for 30s means a dead link
         sock.startHandshake();

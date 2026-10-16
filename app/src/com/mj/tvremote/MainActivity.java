@@ -484,7 +484,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         if (session.error != null) {
             errorCard.setVisibility(View.VISIBLE);
             boolean wrong = session.error.startsWith("Wrong code");
-            errorTitle.setText(wrong ? "Wrong code" : "Couldn't connect");
+            errorTitle.setText(wrong ? "Wrong code" : session.error.startsWith("This TV's identity") ? "TV identity changed" : "Couldn't connect");
             errorBody.setText(wrong ? "Check the code on the TV and try again." : session.error);
         } else errorCard.setVisibility(View.GONE);
     }

@@ -103,7 +103,25 @@ public final class Identity {
     }
 
     // ---- TLS ----
-    public SSLSocketFactory socketFactory() throws Exception {
+    /** Thrown during the TLS handshake when the TV's certificate is not the one we saw before. */
+    public static class TvChangedException extends java.security.cert.CertificateException {
+        public TvChangedException() { super("TV certificate changed"); }
+    }
+
+    public static byte[] fingerprint(X509Certificate c) throws Exception {
+        return MessageDigest.getInstance("SHA-256").digest(c.getEncoded());
+    }
+
+    public static boolean causedByTvChange(Throwable t) {
+        for (int n = 0; t != null && n < 8; n++, t = t.getCause()) if (t instanceof TvChangedException) return true;
+        return false;
+    }
+
+    public SSLSocketFactory socketFactory() throws Exception { return socketFactory(null, null); }
+
+    /** pin: the TV certificate fingerprint to require (null = accept any, used while pairing and the first time we connect).
+     *  seen: if not null, receives the fingerprint the TV presented. */
+    public SSLSocketFactory socketFactory(final byte[] pin, final byte[][] seen) throws Exception {
         KeyStore ks = KeyStore.getInstance("PKCS12");
         ks.load(null, null);
         char[] pw = "tv".toCharArray();
@@ -113,7 +131,13 @@ public final class Identity {
         // The TV presents a self-signed certificate; trust is established by the on-screen pairing code.
         TrustManager[] trustAll = new TrustManager[]{new X509TrustManager() {
             public void checkClientTrusted(X509Certificate[] c, String a) {}
-            public void checkServerTrusted(X509Certificate[] c, String a) {}
+            public void checkServerTrusted(X509Certificate[] c, String a) throws java.security.cert.CertificateException {
+                if (c == null || c.length == 0) throw new java.security.cert.CertificateException("no TV certificate");
+                byte[] fp;
+                try { fp = fingerprint(c[0]); } catch (Exception e) { throw new java.security.cert.CertificateException(e); }
+                if (seen != null) seen[0] = fp;
+                if (pin != null && !MessageDigest.isEqual(pin, fp)) throw new TvChangedException();
+            }
             public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
         }};
         SSLContext ctx = SSLContext.getInstance("TLS");
