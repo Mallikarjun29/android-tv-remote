@@ -537,12 +537,28 @@ public class MainActivity extends Activity implements TvSession.Listener {
         r2.topMargin = dp(10);
         c.addView(row2, r2);
 
+        // favourite channels: one strip above both pages (D-pad / touch pad and keypad)
+        favScroll = new android.widget.HorizontalScrollView(this);
+        favScroll.setHorizontalScrollBarEnabled(false);
+        favRow = new LinearLayout(this);
+        favRow.setGravity(Gravity.CENTER_VERTICAL);
+        favScroll.addView(favRow, new FrameLayout.LayoutParams(-2, -1));
+        LinearLayout.LayoutParams fsl = new LinearLayout.LayoutParams(-1, dp(FAV_H + 8));
+        fsl.topMargin = dp(6);
+        c.addView(favScroll, fsl);
         swipe = new Ui.SwipeFrame(this);
         swipe.cb = new Ui.SwipeFrame.Callback() { public void swiped(boolean next) { if (!touchMode) { keypadShown = next; layoutPages(); } } };
         swipe.pageTwo = keypadShown;
-        FrameLayout padHolder = new FrameLayout(this);
+        // the D-pad is 260dp, but shrinks on short screens so the favourites strip never pushes it off
+        final FrameLayout.LayoutParams dl = new FrameLayout.LayoutParams(dp(260), dp(260), Gravity.CENTER);
+        FrameLayout padHolder = new FrameLayout(this) {
+            @Override protected void onMeasure(int wSpec, int hSpec) {
+                int sz = Math.min(dp(260), Math.min(MeasureSpec.getSize(wSpec), MeasureSpec.getSize(hSpec)));
+                if (sz > 0 && (dl.width != sz || dl.height != sz)) { dl.width = sz; dl.height = sz; }
+                super.onMeasure(wSpec, hSpec);
+            }
+        };
         Ui.DPadView dpad = new Ui.DPadView(this, new Ui.DPadView.Callback() { public void key(int k) { session.key(k); } });
-        FrameLayout.LayoutParams dl = new FrameLayout.LayoutParams(dp(260), dp(260), Gravity.CENTER);
         padHolder.addView(dpad, dl);
         padPage = padHolder;
         keypadPage = buildKeypad();
@@ -553,6 +569,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
         tl.topMargin = dp(8); tl.bottomMargin = dp(8);
         swipe.addView(touchPad, tl);
         swipe.left = padPage; swipe.right = keypadPage; swipe.noSwipe = favScroll;
+        rebuildFavs();
         c.addView(swipe, new LinearLayout.LayoutParams(-1, 0, 1));
 
         hint = Ui.text(this, "", 12, Ui.MU, false);
@@ -658,16 +675,6 @@ public class MainActivity extends Activity implements TvSession.Listener {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(dp(8), dp(4), dp(8), dp(4));
-        TextView favLabel = Ui.text(this, "Favourite channels", 12, Ui.MU, true);
-        favLabel.setPadding(dp(6), 0, 0, dp(2));
-        c.addView(favLabel, new LinearLayout.LayoutParams(-1, -2));
-        favScroll = new android.widget.HorizontalScrollView(this);
-        favScroll.setHorizontalScrollBarEnabled(false);
-        favRow = new LinearLayout(this);
-        favRow.setGravity(Gravity.CENTER_VERTICAL);
-        favScroll.addView(favRow, new FrameLayout.LayoutParams(-2, -1));
-        c.addView(favScroll, new LinearLayout.LayoutParams(-1, dp(52)));
-        rebuildFavs();
         echo = Ui.text(this, " ", 26, Ui.TX, true);
         echo.setGravity(Gravity.CENTER);
         c.addView(echo, new LinearLayout.LayoutParams(-1, dp(36)));
@@ -974,6 +981,7 @@ public class MainActivity extends Activity implements TvSession.Listener {
 
     // ---------------------------------------------------------------- favourite channels
 
+    private static final int FAV_H = 58; // dp height of a favourite tile (was 46)
     private android.widget.HorizontalScrollView favScroll;
     private LinearLayout favRow;
 
@@ -985,13 +993,13 @@ public class MainActivity extends Activity implements TvSession.Listener {
         favRow.removeAllViews();
         final List<FavStore.Fav> l = favs();
         if (l.isEmpty()) {
-            TextView t = Ui.text(this, "+  Add your first favourite\nType a number below, then hold here to save it", 12, Ui.ACC, true);
+            TextView t = Ui.text(this, "+  Add your first favourite\nType a number on the keypad (123), then hold here to save it", 12, Ui.ACC, true);
             t.setGravity(Gravity.CENTER_VERTICAL);
             t.setPadding(dp(14), 0, dp(14), 0);
             t.setBackground(Ui.outlined(Ui.BG, Ui.ACC, dp(1), dp(18)));
             Runnable add = new Runnable() { public void run() { showFavDialog(-1); } };
             Ui.button(t, add, false, add);
-            favRow.addView(t, new LinearLayout.LayoutParams(-1, dp(46)));
+            favRow.addView(t, new LinearLayout.LayoutParams(-1, dp(FAV_H)));
             return;
         }
         for (int i = 0; i < l.size(); i++) {
@@ -1000,24 +1008,24 @@ public class MainActivity extends Activity implements TvSession.Listener {
             LinearLayout chip = new LinearLayout(this);
             chip.setOrientation(LinearLayout.VERTICAL);
             chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp(14), 0, dp(14), 0);
-            chip.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(18)));
-            TextView n = Ui.text(this, f.name, 13, Ui.TX, true); n.setGravity(Gravity.CENTER); n.setSingleLine(true);
-            TextView num = Ui.text(this, f.number, 11, Ui.MU, false); num.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(18), 0, dp(18), 0);
+            chip.setBackground(Ui.pressable(Ui.CARD, Ui.CARD_PRESSED, dp(20)));
+            TextView n = Ui.text(this, f.name, 15, Ui.TX, true); n.setGravity(Gravity.CENTER); n.setSingleLine(true);
+            TextView num = Ui.text(this, f.number, 12, Ui.MU, false); num.setGravity(Gravity.CENTER);
             chip.addView(n); chip.addView(num);
             Ui.button(chip, new Runnable() { public void run() { sendChannel(f.number); } },
                     false, new Runnable() { public void run() { showFavDialog(idx); } });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(46));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(FAV_H));
             lp.rightMargin = dp(8);
             favRow.addView(chip, lp);
         }
         if (l.size() < FavStore.MAX_FAVS) {
             FrameLayout plus = new FrameLayout(this);
-            plus.setBackground(Ui.outlined(Ui.BG, Ui.ACC, dp(1), dp(18)));
-            plus.addView(new Ui.IconView(this, Ui.I_PLUS, Ui.ACC), new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
+            plus.setBackground(Ui.outlined(Ui.BG, Ui.ACC, dp(1), dp(20)));
+            plus.addView(new Ui.IconView(this, Ui.I_PLUS, Ui.ACC), new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
             Runnable add = new Runnable() { public void run() { showFavDialog(-1); } };
             Ui.button(plus, add, false);
-            favRow.addView(plus, new LinearLayout.LayoutParams(dp(46), dp(46)));
+            favRow.addView(plus, new LinearLayout.LayoutParams(dp(FAV_H), dp(FAV_H)));
         }
     }
 

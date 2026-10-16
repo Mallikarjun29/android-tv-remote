@@ -106,8 +106,17 @@ public final class TvSession {
         bg.execute(new Runnable() { public void run() {
             try {
                 Identity i = identity();
-                if (tryRemote(i, ip, g, 3000)) return;
-                if (g != gen) return;
+                // A TV we already connected to is paired with us. After the app is swiped away the TV can be slow
+                // to take a new session (still waking, or holding the old one), so retry before concluding it forgot us.
+                // Only then fall back to a fresh pairing code. A TV never seen before gets one quick try.
+                boolean known = ip.equals(prefs.getString("host", null));
+                int tries = known ? 4 : 1;
+                for (int n = 0; n < tries; n++) {
+                    if (tryRemote(i, ip, g, known ? 4000 + 1500 * n : 3000)) return;
+                    if (g != gen) return;
+                    if (n + 1 < tries) { try { Thread.sleep(1500); } catch (InterruptedException ignored) {} }
+                    if (g != gen) return;
+                }
                 PairingClient p = new PairingClient(i, ip, 6467);
                 p.start(CLIENT_NAME);
                 if (g != gen) { p.close(); return; }

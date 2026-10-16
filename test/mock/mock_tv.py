@@ -57,7 +57,8 @@ async def read_frame(r):
     return await r.readexactly(n)
 def frame(msg): b = msg.SerializeToString(); return _VarintBytes(len(b)) + b
 
-PAIRED = False
+PAIRED = os.environ.get("MOCK_PAIRED") == "1"   # start as an already-paired TV (cold-start tests)
+DROP_FIRST = int(os.environ.get("DROP_FIRST", "0"))  # drop this many remote connections right after TLS, like a TV that is slow to wake or still holds the old session
 
 async def pairing(r, w):
     global PAIRED
@@ -91,6 +92,9 @@ async def pairing(r, w):
     finally: w.close()
 
 async def remote(r, w):
+    global DROP_FIRST
+    if DROP_FIRST > 0:
+        DROP_FIRST -= 1; log(ev="remote_dropped"); w.close(); return
     if not PAIRED:
         log(ev="remote_rejected_unpaired"); w.close(); return
     log(ev="remote_conn")

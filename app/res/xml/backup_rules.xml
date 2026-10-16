@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include domain="sharedpref" path="tvremote.xml"/>
+    <include domain="file" path="client_key.der"/>
+    <include domain="file" path="client_cert.der"/>
+</full-backup-content>

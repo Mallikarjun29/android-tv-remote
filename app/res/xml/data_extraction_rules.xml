@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="tvremote.xml"/>
+        <include domain="file" path="client_key.der"/>
+        <include domain="file" path="client_cert.der"/>
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="tvremote.xml"/>
+        <include domain="file" path="client_key.der"/>
+        <include domain="file" path="client_cert.der"/>
+    </device-transfer>
+</data-extraction-rules>

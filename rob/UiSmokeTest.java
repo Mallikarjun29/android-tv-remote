@@ -132,6 +132,7 @@ public class UiSmokeTest {
         sf.dispatchTouchEvent(MotionEvent.obtain(ts, ts + 60, MotionEvent.ACTION_UP, 600, 100, 0));
         pump(400);
         check("swipe right returns to d-pad page", has(a, "123") && !has(a, "OK"));
+        check("favourites strip is visible on the D-pad page too", byClass(a, "DPadView", 0) != null && has(a, "+  Add your first favourite\nType a number on the keypad (123), then hold here to save it"));
         // a swipe that starts on a keypad button must not press it
         click(text(a, "123"));
         View b7 = text(a, "7");
@@ -148,8 +149,8 @@ public class UiSmokeTest {
         touch(b7, 5, 5); pump(300);
         check("a clean tap on the same button still presses it", logHas("\"code\": 14,"));
         // favourite channels
-        check("empty favourites state is shown", has(a, "Favourite channels") && has(a, "+  Add your first favourite\nType a number below, then hold here to save it"));
-        View emptyChip = text(a, "+  Add your first favourite\nType a number below, then hold here to save it");
+        check("empty favourites state is shown", has(a, "+  Add your first favourite\nType a number on the keypad (123), then hold here to save it"));
+        View emptyChip = text(a, "+  Add your first favourite\nType a number on the keypad (123), then hold here to save it");
         check("empty chip found", emptyChip != null);
         pump(3000);  // let the earlier echo clear
         touch(text(a, "1"), 5, 5); touch(text(a, "0"), 5, 5); touch(text(a, "5"), 5, 5);  // typed 105
@@ -182,7 +183,7 @@ public class UiSmokeTest {
         check("holding a chip opens Edit favourite with Delete", favEdit != null && favEdit.isShowing() && favEdit.getButton(AlertDialog.BUTTON_NEUTRAL) != null);
         favEdit.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();
         pump(300);
-        check("delete removes it, empty state returns", !has(a, "Sony Max") && has(a, "+  Add your first favourite\nType a number below, then hold here to save it"));
+        check("delete removes it, empty state returns", !has(a, "Sony Max") && has(a, "+  Add your first favourite\nType a number on the keypad (123), then hold here to save it"));
         click(text(a, "D-pad"));
         // power and bottom block
         View power = null;
