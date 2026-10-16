@@ -63,6 +63,7 @@ public class UiSmokeTest {
         File fd = org.robolectric.RuntimeEnvironment.getApplication().getFilesDir();
         Files.copy(Paths.get(DIR, "client_key.der"), new File(fd, "client_key.der").toPath(), StandardCopyOption.REPLACE_EXISTING);
         Files.copy(Paths.get(DIR, "client_cert.der"), new File(fd, "client_cert.der").toPath(), StandardCopyOption.REPLACE_EXISTING);
+        org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences("tvremote", 0).edit().putString("client_name", "TV Remote - Test abcd").commit(); // a v1.7 install already has its own name
         ActivityController<MainActivity> c = Robolectric.buildActivity(MainActivity.class).setup();
         MainActivity a = c.get();
         check("setup screen shown first (Add your TV)", has(a, "Add your TV"));

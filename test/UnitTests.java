@@ -5,6 +5,15 @@ public class UnitTests {
     static int fails = 0;
     static void eq(String n, Object a, Object b) { boolean ok = Objects.equals(a, b); System.out.println((ok ? "PASS " : "FAIL ") + n + (ok ? "" : "  got=" + a + " want=" + b)); if (!ok) fails++; }
     public static void main(String[] x) {
+        {
+            java.util.Random r = new java.util.Random(5);
+            java.util.Set<String> seen = new java.util.HashSet<String>();
+            for (int i = 0; i < 200; i++) seen.add(com.mj.tvremote.ClientName.make("Pixel 7", r));
+            eq("client names differ per install", seen.size() > 195 ? "ok" : "dupes " + seen.size(), "ok");
+            eq("name has model", com.mj.tvremote.ClientName.make("Pixel 7", new java.util.Random(1)).startsWith("TV Remote - Pixel 7 ") ? "ok" : "bad", "ok");
+            eq("name strips junk", com.mj.tvremote.ClientName.make("A\"B<>", new java.util.Random(1)).matches("TV Remote - AB [0-9a-f]{4}") ? "ok" : "bad", "ok");
+            eq("empty model", com.mj.tvremote.ClientName.make(null, new java.util.Random(1)).matches("TV Remote [0-9a-f]{4}") ? "ok" : "bad", "ok");
+        }
         TextDiff d = TextDiff.between("", "a"); eq("append first char", d.deletions + "|" + d.insertion, "0|a");
         d = TextDiff.between("abc", "abcd"); eq("append", d.deletions + "|" + d.insertion, "0|d");
         d = TextDiff.between("abc", "ab"); eq("backspace", d.deletions + "|" + d.insertion, "1|");

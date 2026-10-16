@@ -62,15 +62,25 @@ public final class TvSession {
     public SharedPreferences prefs() { return prefs; }
     public boolean hasSavedTv() { return host != null; }
 
+    /** The name this install pairs under. Installs from before v1.7 have no saved name: they keep the old shared one so their pairing stays valid. */
+    private String clientName() { return prefs.getString("client_name", ClientName.LEGACY); }
+
     private Identity identity() throws Exception {
         if (id != null) return id;
         File k = new File(ctx.getFilesDir(), "client_key.der"), c = new File(ctx.getFilesDir(), "client_cert.der");
         if (k.exists() && c.exists()) {
             try { id = Identity.load(read(k), read(c)); return id; } catch (Exception ignored) {}
         }
-        id = Identity.generate("tvremote");
-        write(k, id.keyBytes());
-        write(c, id.certBytes());
+        return newIdentity();
+    }
+
+    /** A fresh key and certificate under a name no other phone uses. */
+    private Identity newIdentity() throws Exception {
+        String name = ClientName.make(android.os.Build.MODEL, new java.security.SecureRandom());
+        id = Identity.generate(name);
+        write(new File(ctx.getFilesDir(), "client_key.der"), id.keyBytes());
+        write(new File(ctx.getFilesDir(), "client_cert.der"), id.certBytes());
+        prefs.edit().putString("client_name", name).commit();
         return id;
     }
 
@@ -117,8 +127,11 @@ public final class TvSession {
                     if (n + 1 < tries) { try { Thread.sleep(1500); } catch (InterruptedException ignored) {} }
                     if (g != gen) return;
                 }
+                // This phone could not get back in although it was paired. Phones that share the old "TV Remote" name push each
+                // other out, so move this one to a name of its own before asking for a new code.
+                if (!prefs.contains("client_name")) i = newIdentity();
                 PairingClient p = new PairingClient(i, ip, 6467);
-                p.start(CLIENT_NAME);
+                p.start(clientName());
                 if (g != gen) { p.close(); return; }
                 pairing = p;
                 set(State.NEED_CODE, null);
